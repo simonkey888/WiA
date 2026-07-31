@@ -1,0 +1,68 @@
+name: Deploy WiA
+
+on:
+  push:
+    branches:
+      - feat/wia-beta-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-wia
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.DEPLOY_NOW }}
+      CLOUDFLARE_ACCOUNT_ID: b21fa81d12acb663798f9f7c51801955
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate secret presence
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "DEPLOY_NOW is empty"; exit 1; }
+
+      - name: Dry run
+        run: npx --yes wrangler@4.116.0 deploy --dry-run
+
+      - name: Deploy Worker
+        run: npx --yes wrangler@4.116.0 deploy
+
+      - name: Verify health and real chat
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://wia.simondalmasso44.workers.dev"
+          health=""
+          for attempt in $(seq 1 18); do
+            health="$(curl -fsS --max-time 20 "$base/api/health" || true)"
+            if echo "$health" | grep -q 'WIA_CF_FIRST_LIVE_001'; then
+              break
+            fi
+            sleep 5
+          done
+          echo "$health"
+          echo "$health" | grep -q '"ok":true'
+          echo "$health" | grep -q 'WIA_CF_FIRST_LIVE_001'
+
+          chat="$(curl -fsS --max-time 120 -X POST "$base/api/chat" -H 'content-type: application/json' --data '{"message":"Respondé en una sola frase: ¿quién sos?","history":[]}')"
+          printf '%s' "$chat" > /tmp/chat.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('/tmp/chat.json', 'utf8'));
+          if (data.ok !== true) throw new Error(`chat ok=false: ${JSON.stringify(data)}`);
+          if (data.degraded !== false) throw new Error(`chat degraded: ${JSON.stringify(data)}`);
+          if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('empty reply');
+          if (typeof data.model !== 'string' || !data.model.trim()) throw new Error('empty model');
+          console.log(JSON.stringify({ok:data.ok,model:data.model,reply:data.reply}));
+          NODE
