@@ -1,0 +1,48 @@
+name: Bootstrap WiA V1.1 Exact Source
+
+on:
+  push:
+    branches:
+      - feat/wia-face-voice-ux-v1-1
+    paths:
+      - .github/workflows/bootstrap-wia-v1-1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: bootstrap-wia-face-voice-v1-1
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout bootstrap branch
+        uses: actions/checkout@v6
+        with:
+          ref: feat/wia-face-voice-ux-v1-1
+          fetch-depth: 0
+
+      - name: Materialize deterministic source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash ops/materialize-wia-v1-1.sh
+
+      - name: Dispatch full verification and deployment workflow
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if gh workflow run deploy-wia-face-voice-v1-1.yml --repo "$GITHUB_REPOSITORY" --ref feat/wia-face-voice-ux-v1-1; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
