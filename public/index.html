@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0d0716">
+  <meta name="color-scheme" content="dark">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preload" href="/assets/wia-face-base.v1.svg" as="image" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <title>WiA</title>
+</head>
+<body>
+  <main class="app" id="app">
+    <section class="presence" aria-label="WiA">
+      <div class="face" id="face" role="button" tabindex="0" aria-label="Abrir o hablar con WiA">
+        <img class="face-base" src="/assets/wia-face-base.v1.svg" alt="WiA, rostro femenino low-poly violeta" draggable="false">
+        <div class="face-expression-layer" aria-hidden="true">
+          <span class="eyelid eyelid-left"></span>
+          <span class="eyelid eyelid-right"></span>
+          <span class="speech-glow"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel" aria-hidden="true" inert>
+      <div class="messages" id="messages" aria-live="polite">
+        <div class="msg wia">Estoy acá.</div>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+      <form class="composer" id="form">
+        <textarea id="input" rows="1" maxlength="6000" autocomplete="off" enterkeyhint="send" placeholder="Decime algo"></textarea>
+        <button type="submit">Enviar</button>
+      </form>
+    </section>
+  </main>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
