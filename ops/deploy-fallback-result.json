@@ -1,6 +1,6 @@
 {
-  "recorded_at_utc": "2026-07-31T13:41:36.603Z",
-  "commit": "166f16fc88e221fd5689030c74d0312fe111b1b7",
+  "recorded_at_utc": "2026-07-31T14:47:30.460Z",
+  "commit": "a6518db1af6c50c1ac949597bfb521273f3841b8",
   "deploy": {
     "ok": true,
     "http": 200,
@@ -9,12 +9,12 @@
     "response": {
       "result": {
         "created_on": "2026-07-31T05:13:40.833353Z",
-        "modified_on": "2026-07-31T13:41:34.709789Z",
+        "modified_on": "2026-07-31T14:45:28.427202Z",
         "id": "wia",
         "tag": "53228d86cfbb4820881e1c998b322086",
         "entry_point": "index.js",
         "tags": [],
-        "deployment_id": "1b6066cfba404a299fc4484ec521eee7",
+        "deployment_id": "85020b141d7147e2ba313e2286cf5613",
         "tail_consumers": null,
         "logpush": false,
         "observability": {
@@ -23,7 +23,7 @@
         },
         "has_assets": false,
         "has_modules": true,
-        "etag": "aca1a3fd17c1f40b40cb40fd3c44f388a2affe3fe863a64d7bd283e4476b60b7",
+        "etag": "326361ef4f449813186decf5b78aad645423fa120b4a32ea0143d4952bd78eac",
         "handlers": [
           "fetch"
         ],
@@ -38,25 +38,24 @@
     }
   },
   "health": {
-    "ok": true,
+    "ok": false,
     "http": 200,
     "response": {
       "ok": true,
       "worker": "wia",
-      "workset": "WIA-CF-FIRST-LIVE-001",
-      "marker": "WIA_CF_FIRST_LIVE_001",
+      "workset": "WIA-FACE-CANONICAL-V1",
+      "marker": "WIA_FACE_CANONICAL_V1",
       "model": "@cf/zai-org/glm-4.7-flash",
       "fallback": "@cf/qwen/qwen3-30b-a3b-fp8",
       "mobile_first": true,
-      "pwa": false
+      "pwa": true,
+      "face_asset": "/assets/wia-face-base.v1.svg"
     }
   },
   "chat": {
     "ok": false,
-    "http": 404,
-    "response": {
-      "ok": false
-    }
+    "http": 0,
+    "response": null
   },
   "status": "BLOCKED"
 }
