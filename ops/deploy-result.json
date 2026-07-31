@@ -1,38 +1,79 @@
 {
   "claim": "WIA-WORKERS-FIRST-DEPLOY",
-  "recorded_at_utc": "2026-07-31T12:42:49.787Z",
-  "commit": "6ed936b537fd18a2ab62088e0a383c025c042354",
+  "recorded_at_utc": "2026-07-31T13:46:51.504Z",
+  "commit": "a1e5f5d6fd1104e0897cfe49dee957ab562a949e",
   "branch": "feat/wia-beta-v1",
   "token_shape": {
-    "length": 12,
-    "normalized_length": 12,
+    "length": 53,
+    "normalized_length": 53,
     "variants": 1
   },
   "deploy": {
-    "ok": false,
-    "http": 400,
+    "ok": true,
+    "http": 200,
     "attempts": 1,
     "response": {
-      "success": false,
-      "errors": [
-        {
-          "code": 9106,
-          "message": "Authentication failed (status: 400)"
-        }
-      ],
-      "messages": [],
-      "result": null
+      "result": {
+        "created_on": "2026-07-31T05:13:40.833353Z",
+        "modified_on": "2026-07-31T13:46:32.467615Z",
+        "id": "wia",
+        "tag": "53228d86cfbb4820881e1c998b322086",
+        "entry_point": "index.js",
+        "tags": [],
+        "deployment_id": "99fc280eb4514dc08a210e194b2eec35",
+        "tail_consumers": null,
+        "logpush": false,
+        "observability": {
+          "enabled": true,
+          "head_sampling_rate": null
+        },
+        "has_assets": false,
+        "has_modules": true,
+        "etag": "aca1a3fd17c1f40b40cb40fd3c44f388a2affe3fe863a64d7bd283e4476b60b7",
+        "handlers": [
+          "fetch"
+        ],
+        "last_deployed_from": "api",
+        "compatibility_date": "2026-07-31",
+        "usage_model": "standard",
+        "startup_time_ms": 0
+      },
+      "success": true,
+      "errors": [],
+      "messages": []
     }
   },
   "health": {
-    "ok": false,
-    "http": 0,
-    "response": null
+    "ok": true,
+    "http": 200,
+    "response": {
+      "ok": true,
+      "worker": "wia",
+      "workset": "WIA-CF-FIRST-LIVE-001",
+      "marker": "WIA_CF_FIRST_LIVE_001",
+      "model": "@cf/zai-org/glm-4.7-flash",
+      "fallback": "@cf/qwen/qwen3-30b-a3b-fp8",
+      "mobile_first": true,
+      "pwa": false
+    }
   },
   "chat": {
     "ok": false,
-    "http": 0,
-    "response": null
+    "http": 503,
+    "response": {
+      "ok": false,
+      "error": "MODEL_UNAVAILABLE",
+      "failures": [
+        {
+          "model": "@cf/zai-org/glm-4.7-flash",
+          "error": "EMPTY_MODEL_RESPONSE"
+        },
+        {
+          "model": "@cf/qwen/qwen3-30b-a3b-fp8",
+          "error": "EMPTY_MODEL_RESPONSE"
+        }
+      ]
+    }
   },
   "status": "BLOCKED"
 }
