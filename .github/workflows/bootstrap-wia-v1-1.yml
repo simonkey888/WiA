@@ -46,3 +46,5 @@ jobs:
             sleep 5
           done
           exit 1
+
+# exact archive segments reconciled before this retry
