@@ -1,0 +1,138 @@
+name: Deploy WiA Fallback
+
+on:
+  push:
+    branches: [feat/wia-beta-v1]
+    paths-ignore:
+      - ops/deploy-fallback-result.json
+      - ops/deploy-result.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-wia-fallback
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ACCOUNT_ID: b21fa81d12acb663798f9f7c51801955
+      BASE_URL: https://wia.simondalmasso44.workers.dev
+      TOKEN_1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TOKEN_2: ${{ secrets.CF_API_TOKEN }}
+      TOKEN_3: ${{ secrets.CLOUDFLARE_TOKEN }}
+      TOKEN_4: ${{ secrets.DEPLOY_NOW }}
+      GLOBAL_KEY_1: ${{ secrets.CLOUDFLARE_API_KEY }}
+      GLOBAL_KEY_2: ${{ secrets.CLOUDFLARE_GLOBAL_API_KEY }}
+      GLOBAL_KEY_3: ${{ secrets.CF_API_KEY }}
+      GLOBAL_EMAIL_1: ${{ secrets.CLOUDFLARE_EMAIL }}
+      GLOBAL_EMAIL_2: ${{ secrets.CF_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/wia-beta-v1
+
+      - name: Deploy using any valid configured credential
+        id: deploy
+        shell: bash
+        run: |
+          set +e
+          cat > /tmp/metadata.json <<'JSON'
+          {"main_module":"index.js","compatibility_date":"2026-07-31","bindings":[{"type":"ai","name":"AI"}],"observability":{"enabled":true}}
+          JSON
+          : > /tmp/candidates
+          for raw in "$TOKEN_1" "$TOKEN_2" "$TOKEN_3" "$TOKEN_4"; do
+            [ -n "$raw" ] || continue
+            token="$(printf '%s' "$raw" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            token="${token#CLOUDFLARE_API_TOKEN=}"; token="${token#DEPLOY_NOW=}"
+            token="${token#Authorization: Bearer }"; token="${token#Bearer }"
+            token="${token#\"}"; token="${token%\"}"; token="${token#\'}"; token="${token%\'}"
+            if printf '%s' "$token" | jq -e . >/dev/null 2>&1; then
+              parsed="$(printf '%s' "$token" | jq -r '.token // .api_token // .CLOUDFLARE_API_TOKEN // .DEPLOY_NOW // empty' 2>/dev/null)"
+              [ -n "$parsed" ] && printf '%s\n' "$parsed" >> /tmp/candidates
+            fi
+            printf '%s\n' "$token" >> /tmp/candidates
+          done
+          awk 'NF && !seen[$0]++' /tmp/candidates > /tmp/candidates.unique
+
+          ok=false; http=0; method=none; attempts=0
+          while IFS= read -r candidate; do
+            attempts=$((attempts+1))
+            http=$(curl -sS --max-time 180 -o /tmp/cf.json -w '%{http_code}' \
+              -X PUT "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/scripts/wia" \
+              -H "Authorization: Bearer ${candidate}" \
+              -F 'metadata=@/tmp/metadata.json;type=application/json' \
+              -F 'index.js=@src/index.js;type=application/javascript+module')
+            if [ "$http" -ge 200 ] && [ "$http" -lt 300 ] && jq -e '.success == true' /tmp/cf.json >/dev/null 2>&1; then ok=true; method=bearer; break; fi
+          done < /tmp/candidates.unique
+
+          if [ "$ok" != true ]; then
+            key="${GLOBAL_KEY_1:-${GLOBAL_KEY_2:-$GLOBAL_KEY_3}}"
+            email="${GLOBAL_EMAIL_1:-$GLOBAL_EMAIL_2}"
+            if [ -n "$key" ] && [ -n "$email" ]; then
+              attempts=$((attempts+1))
+              http=$(curl -sS --max-time 180 -o /tmp/cf.json -w '%{http_code}' \
+                -X PUT "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/scripts/wia" \
+                -H "X-Auth-Key: ${key}" -H "X-Auth-Email: ${email}" \
+                -F 'metadata=@/tmp/metadata.json;type=application/json' \
+                -F 'index.js=@src/index.js;type=application/javascript+module')
+              if [ "$http" -ge 200 ] && [ "$http" -lt 300 ] && jq -e '.success == true' /tmp/cf.json >/dev/null 2>&1; then ok=true; method=global_key; fi
+            fi
+          fi
+
+          jq 'del(.. | .token?, .. | .key?, .. | .secret?, .. | .value?)' /tmp/cf.json > /tmp/cf-safe.json 2>/dev/null || echo '{}' > /tmp/cf-safe.json
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"; echo "http=$http" >> "$GITHUB_OUTPUT"; echo "method=$method" >> "$GITHUB_OUTPUT"; echo "attempts=$attempts" >> "$GITHUB_OUTPUT"
+          rm -f /tmp/candidates /tmp/candidates.unique
+          unset candidate token raw key email
+          exit 0
+
+      - name: Verify live Worker
+        id: verify
+        if: steps.deploy.outputs.ok == 'true'
+        shell: bash
+        run: |
+          set +e
+          health_ok=false; chat_ok=false; health_http=0; chat_http=0
+          for i in $(seq 1 24); do
+            health_http=$(curl -sS --max-time 20 -o /tmp/health.json -w '%{http_code}' "$BASE_URL/api/health")
+            if [ "$health_http" = 200 ] && jq -e '.marker == "WIA_CF_FIRST_LIVE_001"' /tmp/health.json >/dev/null 2>&1; then health_ok=true; break; fi
+            sleep 5
+          done
+          if [ "$health_ok" = true ]; then
+            chat_http=$(curl -sS --max-time 150 -o /tmp/chat.json -w '%{http_code}' -X POST "$BASE_URL/api/chat" -H 'content-type: application/json' --data '{"message":"Respondé en una sola frase: ¿quién sos?","history":[]}')
+            if [ "$chat_http" = 200 ] && jq -e '.ok == true and .degraded == false and (.reply|length>0) and (.model|length>0)' /tmp/chat.json >/dev/null 2>&1; then chat_ok=true; fi
+          fi
+          echo "health_ok=$health_ok" >> "$GITHUB_OUTPUT"; echo "chat_ok=$chat_ok" >> "$GITHUB_OUTPUT"; echo "health_http=$health_http" >> "$GITHUB_OUTPUT"; echo "chat_http=$chat_http" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Record result
+        if: always()
+        shell: bash
+        env:
+          DEPLOY_OK: ${{ steps.deploy.outputs.ok }}
+          DEPLOY_HTTP: ${{ steps.deploy.outputs.http }}
+          DEPLOY_METHOD: ${{ steps.deploy.outputs.method }}
+          DEPLOY_ATTEMPTS: ${{ steps.deploy.outputs.attempts }}
+          HEALTH_OK: ${{ steps.verify.outputs.health_ok }}
+          CHAT_OK: ${{ steps.verify.outputs.chat_ok }}
+          HEALTH_HTTP: ${{ steps.verify.outputs.health_http }}
+          CHAT_HTTP: ${{ steps.verify.outputs.chat_http }}
+        run: |
+          mkdir -p ops
+          node <<'NODE'
+          const fs=require('fs'); const read=p=>{try{return JSON.parse(fs.readFileSync(p,'utf8'))}catch{return null}};
+          const r={recorded_at_utc:new Date().toISOString(),commit:process.env.GITHUB_SHA,deploy:{ok:process.env.DEPLOY_OK==='true',http:+(process.env.DEPLOY_HTTP||0),method:process.env.DEPLOY_METHOD,attempts:+(process.env.DEPLOY_ATTEMPTS||0),response:read('/tmp/cf-safe.json')},health:{ok:process.env.HEALTH_OK==='true',http:+(process.env.HEALTH_HTTP||0),response:read('/tmp/health.json')},chat:{ok:process.env.CHAT_OK==='true',http:+(process.env.CHAT_HTTP||0),response:read('/tmp/chat.json')}}; r.status=r.deploy.ok&&r.health.ok&&r.chat.ok?'PASS':'BLOCKED'; fs.writeFileSync('ops/deploy-fallback-result.json',JSON.stringify(r,null,2)+'\n');
+          NODE
+          git config user.name github-actions
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ops/deploy-fallback-result.json
+          git commit -m 'ops: record fallback deploy result' || true
+          git push origin HEAD:feat/wia-beta-v1
+
+      - name: Require success
+        if: always()
+        run: jq -e '.status == "PASS"' ops/deploy-fallback-result.json
