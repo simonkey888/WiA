@@ -1,31 +1,63 @@
 {
-  "claim": "WIA-WORKERS-FIRST-DEPLOY-FROM-MAIN",
-  "recorded_at_utc": "2026-07-31T13:49:59.383Z",
+  "claim": "WIA-FACE-CANONICAL-V1-DEPLOY",
+  "recorded_at_utc": "2026-07-31T14:46:16.262Z",
   "source_branch": "feat/wia-beta-v1",
-  "source_commit": "37e6ce7149e0d3af9e7d87ec778e2f9f9f6a3f4a",
+  "source_commit": "a6518db1af6c50c1ac949597bfb521273f3841b8",
+  "source_validation": {
+    "outcome": "success"
+  },
+  "wrangler_dry_run": {
+    "outcome": "success"
+  },
   "deploy": {
     "outcome": "success",
-    "stdout": "\n ⛅️ wrangler 4.116.0\n────────────────────\nTotal Upload: 11.83 KiB / gzip: 4.70 KiB\nYour Worker has access to the following bindings:\nBinding        Resource      \nenv.AI         AI            \n\nUploaded wia (1.31 sec)\nDeployed wia triggers (0.52 sec)\n  https://wia.simondalmasso44.workers.dev\nCurrent Version ID: [REDACTED]\n\nCloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md\n",
-    "stderr": ""
+    "stdout": "\n ⛅️ wrangler 4.116.0 (update available 4.118.0)\n───────────────────────────────────────────────\n🌀 Building list of assets...\n✨ Read 11 files from the assets directory /home/runner/work/WiA/WiA/app/public\n🌀 Starting asset upload...\nNo updated asset files to upload. Proceeding with deployment...\nTotal Upload: 6.20 KiB / gzip: 2.30 KiB\nYour Worker has access to the following bindings:\nBinding            Resource      \nenv.AI             AI            \nenv.ASSETS         Assets        \n\nUploaded wia (3.15 sec)\nDeployed wia triggers (0.60 sec)\n  https://wia.simondalmasso44.workers.dev\nCurrent Version ID: [REDACTED]\n",
+    "stderr": "\u001b[33m▲ \u001b[43;33m[\u001b[43;30mWARNING\u001b[43;33m]\u001b[0m \u001b[1mYou are about to upload a Worker that was last updated via the script API.\u001b[0m\n\n  Edits that have been made via the script API will be overridden by your local code and config.\n\n\n"
   },
   "health": {
     "outcome": "success",
     "response": {
       "ok": true,
       "worker": "wia",
-      "workset": "WIA-CF-FIRST-LIVE-001",
-      "marker": "WIA_CF_FIRST_LIVE_001",
+      "workset": "WIA-FACE-CANONICAL-V1",
+      "marker": "WIA_FACE_CANONICAL_V1",
       "model": "@cf/zai-org/glm-4.7-flash",
       "fallback": "@cf/qwen/qwen3-30b-a3b-fp8",
       "mobile_first": true,
-      "pwa": false
+      "pwa": true,
+      "face_asset": "/assets/wia-face-base.v1.svg"
     }
+  },
+  "assets": {
+    "outcome": "success",
+    "responses": [
+      {
+        "path": "/assets/wia-face-base.v1.svg",
+        "sha256": "6e099cef3600f62766be8bd2431d5035fbbc50ce5f16fe14c53a741c3e8de0cc",
+        "bytes": 9617
+      },
+      {
+        "path": "/assets/wia-face-layer-2.v1.svg",
+        "sha256": "6ed68cbd20d3870a6fee913005dae68fecf1f921bf1c77e8bdf209e17f0aa049",
+        "bytes": 9507
+      },
+      {
+        "path": "/assets/wia-face-layer-3-4.v1.svg",
+        "sha256": "3bfe50ca3c47b761be90e17d285951f7db05c156607c2e06f7a79a5116926a0d",
+        "bytes": 18369
+      },
+      {
+        "path": "/assets/wia-face-manifest.json",
+        "sha256": "41989944851727756dcbe150a523e245d2898c53834446053158882cf12a303b",
+        "bytes": 1335
+      }
+    ]
   },
   "chat": {
     "outcome": "success",
     "response": {
       "ok": true,
-      "reply": "Soy WiA, una presencia conversacional femenina, directa y con criterio propio.",
+      "reply": "Soy WiA, una presencia conversacional femenina con criterio propio y sin rodeos.",
       "degraded": false,
       "model": "@cf/qwen/qwen3-30b-a3b-fp8",
       "reaction": "neutral",
