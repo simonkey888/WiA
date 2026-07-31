@@ -1,0 +1,36 @@
+{
+  "claim": "WIA-WORKERS-FIRST-DEPLOY-FROM-MAIN",
+  "recorded_at_utc": "2026-07-31T13:49:59.383Z",
+  "source_branch": "feat/wia-beta-v1",
+  "source_commit": "37e6ce7149e0d3af9e7d87ec778e2f9f9f6a3f4a",
+  "deploy": {
+    "outcome": "success",
+    "stdout": "\n ⛅️ wrangler 4.116.0\n────────────────────\nTotal Upload: 11.83 KiB / gzip: 4.70 KiB\nYour Worker has access to the following bindings:\nBinding        Resource      \nenv.AI         AI            \n\nUploaded wia (1.31 sec)\nDeployed wia triggers (0.52 sec)\n  https://wia.simondalmasso44.workers.dev\nCurrent Version ID: [REDACTED]\n\nCloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md\n",
+    "stderr": ""
+  },
+  "health": {
+    "outcome": "success",
+    "response": {
+      "ok": true,
+      "worker": "wia",
+      "workset": "WIA-CF-FIRST-LIVE-001",
+      "marker": "WIA_CF_FIRST_LIVE_001",
+      "model": "@cf/zai-org/glm-4.7-flash",
+      "fallback": "@cf/qwen/qwen3-30b-a3b-fp8",
+      "mobile_first": true,
+      "pwa": false
+    }
+  },
+  "chat": {
+    "outcome": "success",
+    "response": {
+      "ok": true,
+      "reply": "Soy WiA, una presencia conversacional femenina, directa y con criterio propio.",
+      "degraded": false,
+      "model": "@cf/qwen/qwen3-30b-a3b-fp8",
+      "reaction": "neutral",
+      "intensity": 0.5
+    }
+  },
+  "status": "PASS"
+}
