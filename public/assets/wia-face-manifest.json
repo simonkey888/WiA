@@ -1,0 +1,29 @@
+{
+  "version": "WIA-FACE-CANONICAL-V1",
+  "reference": "uploaded two-phone WiA low-poly woman image",
+  "source_crop": {
+    "x": 675,
+    "y": 120,
+    "width": 175,
+    "height": 205
+  },
+  "method": "SVG triangulated reconstruction from the exact extracted reference face",
+  "processing": [
+    "crop",
+    "connected-white-background removal",
+    "adaptive facial feature sampling",
+    "Delaunay triangulation",
+    "silhouette clip path"
+  ],
+  "asset": {
+    "path": "wia-face-base.v1.svg",
+    "sha256": "9e07a33ff3223147bbe3d1bc8addef63f394e07f249d748d4a657e689ac88269",
+    "bytes": 36269,
+    "content_type": "image/svg+xml"
+  },
+  "dimensions": {
+    "viewBox": "0 0 480 570"
+  },
+  "identity_source": "same reference face; no substitute woman",
+  "procedural_face_fallback": false
+}
