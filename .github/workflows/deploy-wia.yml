@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - feat/wia-beta-v1
+    paths-ignore:
+      - ops/deploy-result.json
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: deploy-wia
@@ -20,49 +22,127 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.DEPLOY_NOW }}
       CLOUDFLARE_ACCOUNT_ID: b21fa81d12acb663798f9f7c51801955
+      WORKER_NAME: wia
+      BASE_URL: https://wia.simondalmasso44.workers.dev
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          ref: feat/wia-beta-v1
 
-      - name: Validate secret presence
+      - name: Upload Worker directly
+        id: deploy
         shell: bash
         run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo "DEPLOY_NOW is empty"; exit 1; }
+          set +e
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo '{"success":false,"error":"DEPLOY_NOW_EMPTY"}' > /tmp/deploy.json
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "http=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-      - name: Dry run
-        run: npx --yes wrangler@4.116.0 deploy --dry-run
+          cat > /tmp/metadata.json <<'JSON'
+          {
+            "main_module": "index.js",
+            "compatibility_date": "2026-07-31",
+            "bindings": [
+              { "type": "ai", "name": "AI" }
+            ],
+            "observability": { "enabled": true }
+          }
+          JSON
 
-      - name: Deploy Worker
-        run: npx --yes wrangler@4.116.0 deploy
+          http=$(curl -sS --max-time 180 \
+            -o /tmp/deploy.json \
+            -w '%{http_code}' \
+            -X PUT "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -F 'metadata=@/tmp/metadata.json;type=application/json' \
+            -F 'index.js=@src/index.js;type=application/javascript+module')
+          curl_exit=$?
+          ok=false
+          if [ "$curl_exit" -eq 0 ] && [ "$http" -ge 200 ] && [ "$http" -lt 300 ] && jq -e '.success == true' /tmp/deploy.json >/dev/null 2>&1; then
+            ok=true
+          fi
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          echo "http=$http" >> "$GITHUB_OUTPUT"
+          jq 'del(.. | .token?, .. | .key?, .. | .secret?, .. | .value?)' /tmp/deploy.json > /tmp/deploy-sanitized.json 2>/dev/null || cp /tmp/deploy.json /tmp/deploy-sanitized.json
+          exit 0
 
-      - name: Verify health and real chat
+      - name: Verify deployed health
+        id: health
+        if: steps.deploy.outputs.ok == 'true'
         shell: bash
         run: |
-          set -euo pipefail
-          base="https://wia.simondalmasso44.workers.dev"
-          health=""
-          for attempt in $(seq 1 18); do
-            health="$(curl -fsS --max-time 20 "$base/api/health" || true)"
-            if echo "$health" | grep -q 'WIA_CF_FIRST_LIVE_001'; then
+          set +e
+          ok=false
+          http=0
+          echo '{}' > /tmp/health.json
+          for attempt in $(seq 1 24); do
+            http=$(curl -sS --max-time 20 -o /tmp/health.json -w '%{http_code}' "$BASE_URL/api/health")
+            if [ "$http" = "200" ] && jq -e '.ok == true and .marker == "WIA_CF_FIRST_LIVE_001"' /tmp/health.json >/dev/null 2>&1; then
+              ok=true
               break
             fi
             sleep 5
           done
-          echo "$health"
-          echo "$health" | grep -q '"ok":true'
-          echo "$health" | grep -q 'WIA_CF_FIRST_LIVE_001'
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          echo "http=$http" >> "$GITHUB_OUTPUT"
+          exit 0
 
-          chat="$(curl -fsS --max-time 120 -X POST "$base/api/chat" -H 'content-type: application/json' --data '{"message":"Respondé en una sola frase: ¿quién sos?","history":[]}')"
-          printf '%s' "$chat" > /tmp/chat.json
-          node - <<'NODE'
+      - name: Verify real model response
+        id: chat
+        if: steps.health.outputs.ok == 'true'
+        shell: bash
+        run: |
+          set +e
+          http=$(curl -sS --max-time 150 -o /tmp/chat.json -w '%{http_code}' \
+            -X POST "$BASE_URL/api/chat" \
+            -H 'content-type: application/json; charset=utf-8' \
+            --data '{"message":"Respondé en una sola frase: ¿quién sos?","history":[]}')
+          ok=false
+          if [ "$http" = "200" ] && jq -e '.ok == true and .degraded == false and (.reply | type == "string" and length > 0) and (.model | type == "string" and length > 0)' /tmp/chat.json >/dev/null 2>&1; then
+            ok=true
+          fi
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          echo "http=$http" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Record sanitized result
+        if: always()
+        shell: bash
+        env:
+          DEPLOY_OK: ${{ steps.deploy.outputs.ok }}
+          DEPLOY_HTTP: ${{ steps.deploy.outputs.http }}
+          HEALTH_OK: ${{ steps.health.outputs.ok }}
+          HEALTH_HTTP: ${{ steps.health.outputs.http }}
+          CHAT_OK: ${{ steps.chat.outputs.ok }}
+          CHAT_HTTP: ${{ steps.chat.outputs.http }}
+        run: |
+          mkdir -p ops
+          node <<'NODE'
           const fs = require('fs');
-          const data = JSON.parse(fs.readFileSync('/tmp/chat.json', 'utf8'));
-          if (data.ok !== true) throw new Error(`chat ok=false: ${JSON.stringify(data)}`);
-          if (data.degraded !== false) throw new Error(`chat degraded: ${JSON.stringify(data)}`);
-          if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('empty reply');
-          if (typeof data.model !== 'string' || !data.model.trim()) throw new Error('empty model');
-          console.log(JSON.stringify({ok:data.ok,model:data.model,reply:data.reply}));
+          const read = (p) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
+          const result = {
+            claim: 'WIA-WORKERS-FIRST-DEPLOY',
+            recorded_at_utc: new Date().toISOString(),
+            commit: process.env.GITHUB_SHA,
+            branch: process.env.GITHUB_REF_NAME,
+            deploy: { ok: process.env.DEPLOY_OK === 'true', http: Number(process.env.DEPLOY_HTTP || 0), response: read('/tmp/deploy-sanitized.json') },
+            health: { ok: process.env.HEALTH_OK === 'true', http: Number(process.env.HEALTH_HTTP || 0), response: read('/tmp/health.json') },
+            chat: { ok: process.env.CHAT_OK === 'true', http: Number(process.env.CHAT_HTTP || 0), response: read('/tmp/chat.json') }
+          };
+          result.status = result.deploy.ok && result.health.ok && result.chat.ok ? 'PASS' : 'BLOCKED';
+          fs.writeFileSync('ops/deploy-result.json', JSON.stringify(result, null, 2) + '\n');
           NODE
+          git config user.name github-actions
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ops/deploy-result.json
+          git commit -m "ops: record WiA deploy result" || true
+          git push origin HEAD:feat/wia-beta-v1
+
+      - name: Enforce deployment result
+        if: always()
+        shell: bash
+        run: |
+          jq -e '.status == "PASS"' ops/deploy-result.json
