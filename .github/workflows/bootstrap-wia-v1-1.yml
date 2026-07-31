@@ -10,7 +10,7 @@ on:
 
 permissions:
   contents: write
-  actions: write
+  issues: write
 
 concurrency:
   group: bootstrap-wia-face-voice-v1-1
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   materialize:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout bootstrap branch
         uses: actions/checkout@v6
@@ -27,24 +27,26 @@ jobs:
           ref: feat/wia-face-voice-ux-v1-1
           fetch-depth: 0
 
-      - name: Materialize deterministic source archive
+      - name: Materialize deterministic source and raster assets
         shell: bash
         run: |
           set -euo pipefail
           bash ops/materialize-wia-v1-1.sh
 
-      - name: Dispatch full verification and deployment workflow
+      - name: Append bootstrap blocker to Issue 2
+        if: failure()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          for attempt in $(seq 1 12); do
-            if gh workflow run deploy-wia-face-voice-v1-1.yml --repo "$GITHUB_REPOSITORY" --ref feat/wia-face-voice-ux-v1-1; then
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
+          cat > /tmp/blocker.txt <<EOF
+          ARQ_BOOTSTRAP_BLOCKER
 
-# exact archive segments reconciled before this retry
+          WORKSET=WIA-FACE-VOICE-UX-V1_1
+          BLOCKING_GATE=GATE_1_SOURCE_BRANCH
+          EXACT_ERROR=Deterministic source or raster materialization failed in GitHub Actions run $GITHUB_RUN_ID.
+          CURRENT_COMMIT=$GITHUB_SHA
+          RUN_URL=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          MINIMUM_RECOVERY=Inspect the preserved bootstrap run log and correct only the failing materialization step.
+          EOF
+          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body-file /tmp/blocker.txt
