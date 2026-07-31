@@ -1,0 +1,32 @@
+{
+  "claim": "WIA-WORKERS-FIRST-DEPLOY",
+  "recorded_at_utc": "2026-07-31T12:38:48.562Z",
+  "commit": "597384838aa69e9695ea896389bca6213e84924e",
+  "branch": "feat/wia-beta-v1",
+  "deploy": {
+    "ok": false,
+    "http": 400,
+    "response": {
+      "success": false,
+      "errors": [
+        {
+          "code": 9106,
+          "message": "Authentication failed (status: 400)"
+        }
+      ],
+      "messages": [],
+      "result": null
+    }
+  },
+  "health": {
+    "ok": false,
+    "http": 0,
+    "response": null
+  },
+  "chat": {
+    "ok": false,
+    "http": 0,
+    "response": null
+  },
+  "status": "BLOCKED"
+}
