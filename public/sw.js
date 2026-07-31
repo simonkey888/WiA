@@ -4,6 +4,9 @@ const SHELL = [
   "/app.js",
   "/manifest.webmanifest",
   "/assets/wia-face-base.v1.svg",
+  "/assets/wia-face-layer-2.v1.svg",
+  "/assets/wia-face-layer-3-4.v1.svg",
+  "/assets/wia-face-manifest.json",
 ];
 
 self.addEventListener("install", (event) => {
