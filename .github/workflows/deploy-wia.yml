@@ -34,12 +34,36 @@ jobs:
         shell: bash
         run: |
           set +e
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+          raw="$CLOUDFLARE_API_TOKEN"
+          if [ -z "$raw" ]; then
             echo '{"success":false,"error":"DEPLOY_NOW_EMPTY"}' > /tmp/deploy.json
+            echo '{"length":0,"variants":0}' > /tmp/token-shape.json
             echo "ok=false" >> "$GITHUB_OUTPUT"
             echo "http=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          token="$(printf '%s' "$raw" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          token="${token#CLOUDFLARE_API_TOKEN=}"
+          token="${token#DEPLOY_NOW=}"
+          token="${token#Authorization: Bearer }"
+          token="${token#Bearer }"
+          token="${token#\"}"; token="${token%\"}"
+          token="${token#\'}"; token="${token%\'}"
+
+          json_token=""
+          if printf '%s' "$token" | jq -e . >/dev/null 2>&1; then
+            json_token="$(printf '%s' "$token" | jq -r '.token // .api_token // .CLOUDFLARE_API_TOKEN // .DEPLOY_NOW // empty' 2>/dev/null)"
+          fi
+
+          variants_file=/tmp/token-variants.txt
+          : > "$variants_file"
+          printf '%s\n' "$raw" >> "$variants_file"
+          printf '%s\n' "$token" >> "$variants_file"
+          [ -n "$json_token" ] && printf '%s\n' "$json_token" >> "$variants_file"
+          awk 'NF && !seen[$0]++' "$variants_file" > /tmp/token-variants-unique.txt
+          variant_count=$(wc -l < /tmp/token-variants-unique.txt | tr -d ' ')
+          printf '{"length":%s,"normalized_length":%s,"variants":%s}\n' "${#raw}" "${#token}" "$variant_count" > /tmp/token-shape.json
 
           cat > /tmp/metadata.json <<'JSON'
           {
@@ -52,21 +76,32 @@ jobs:
           }
           JSON
 
-          http=$(curl -sS --max-time 180 \
-            -o /tmp/deploy.json \
-            -w '%{http_code}' \
-            -X PUT "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}" \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -F 'metadata=@/tmp/metadata.json;type=application/json' \
-            -F 'index.js=@src/index.js;type=application/javascript+module')
-          curl_exit=$?
           ok=false
-          if [ "$curl_exit" -eq 0 ] && [ "$http" -ge 200 ] && [ "$http" -lt 300 ] && jq -e '.success == true' /tmp/deploy.json >/dev/null 2>&1; then
-            ok=true
-          fi
+          http=0
+          attempt=0
+          while IFS= read -r candidate; do
+            attempt=$((attempt + 1))
+            http=$(curl -sS --max-time 180 \
+              -o /tmp/deploy-attempt.json \
+              -w '%{http_code}' \
+              -X PUT "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}" \
+              -H "Authorization: Bearer ${candidate}" \
+              -F 'metadata=@/tmp/metadata.json;type=application/json' \
+              -F 'index.js=@src/index.js;type=application/javascript+module')
+            curl_exit=$?
+            cp /tmp/deploy-attempt.json /tmp/deploy.json
+            if [ "$curl_exit" -eq 0 ] && [ "$http" -ge 200 ] && [ "$http" -lt 300 ] && jq -e '.success == true' /tmp/deploy.json >/dev/null 2>&1; then
+              ok=true
+              break
+            fi
+          done < /tmp/token-variants-unique.txt
+
           echo "ok=$ok" >> "$GITHUB_OUTPUT"
           echo "http=$http" >> "$GITHUB_OUTPUT"
+          echo "attempts=$attempt" >> "$GITHUB_OUTPUT"
           jq 'del(.. | .token?, .. | .key?, .. | .secret?, .. | .value?)' /tmp/deploy.json > /tmp/deploy-sanitized.json 2>/dev/null || cp /tmp/deploy.json /tmp/deploy-sanitized.json
+          rm -f /tmp/token-variants.txt /tmp/token-variants-unique.txt
+          unset raw token json_token candidate CLOUDFLARE_API_TOKEN
           exit 0
 
       - name: Verify deployed health
@@ -114,6 +149,7 @@ jobs:
         env:
           DEPLOY_OK: ${{ steps.deploy.outputs.ok }}
           DEPLOY_HTTP: ${{ steps.deploy.outputs.http }}
+          DEPLOY_ATTEMPTS: ${{ steps.deploy.outputs.attempts }}
           HEALTH_OK: ${{ steps.health.outputs.ok }}
           HEALTH_HTTP: ${{ steps.health.outputs.http }}
           CHAT_OK: ${{ steps.chat.outputs.ok }}
@@ -128,7 +164,8 @@ jobs:
             recorded_at_utc: new Date().toISOString(),
             commit: process.env.GITHUB_SHA,
             branch: process.env.GITHUB_REF_NAME,
-            deploy: { ok: process.env.DEPLOY_OK === 'true', http: Number(process.env.DEPLOY_HTTP || 0), response: read('/tmp/deploy-sanitized.json') },
+            token_shape: read('/tmp/token-shape.json'),
+            deploy: { ok: process.env.DEPLOY_OK === 'true', http: Number(process.env.DEPLOY_HTTP || 0), attempts: Number(process.env.DEPLOY_ATTEMPTS || 0), response: read('/tmp/deploy-sanitized.json') },
             health: { ok: process.env.HEALTH_OK === 'true', http: Number(process.env.HEALTH_HTTP || 0), response: read('/tmp/health.json') },
             chat: { ok: process.env.CHAT_OK === 'true', http: Number(process.env.CHAT_HTTP || 0), response: read('/tmp/chat.json') }
           };
