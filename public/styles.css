@@ -1,0 +1,323 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  color-scheme: dark;
+  --visual-height: 100dvh;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --bg-deep: #09050f;
+  --panel: rgba(13, 7, 22, 0.94);
+  --violet: #8f4ee8;
+  --violet-user: #7137ba;
+  --wia-bubble: #21112f;
+}
+
+html {
+  min-height: 100%;
+  min-height: 100svh;
+  background: var(--bg-deep);
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  width: 100%;
+  height: var(--visual-height);
+  min-height: 100svh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--bg-deep);
+  color: #f7efff;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  touch-action: manipulation;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+.app {
+  position: relative;
+  width: min(100vw, 480px);
+  height: var(--visual-height);
+  min-height: 100svh;
+  margin: 0 auto;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(83, 31, 133, 0.48) 0, rgba(23, 11, 41, 0.92) 44%, #09050f 100%);
+  isolation: isolate;
+}
+
+.presence {
+  position: absolute;
+  inset: var(--safe-top) 0 var(--safe-bottom);
+  display: grid;
+  place-items: center;
+  z-index: 2;
+  pointer-events: none;
+  transition: transform 360ms cubic-bezier(.2,.75,.2,1), filter 360ms ease;
+}
+
+.face {
+  position: relative;
+  width: clamp(210px, 66vw, 250px);
+  aspect-ratio: 480 / 570;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  filter: drop-shadow(0 22px 34px rgba(0,0,0,.58));
+  animation: idle-breathe 7.2s ease-in-out infinite;
+  transform-origin: 50% 60%;
+  outline: none;
+}
+
+.face:focus-visible {
+  filter: drop-shadow(0 0 0.55rem rgba(206, 156, 255, .72)) drop-shadow(0 22px 34px rgba(0,0,0,.58));
+}
+
+.face-base {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transform: translateZ(0);
+  transition: filter 260ms ease, transform 260ms ease;
+}
+
+.face-expression-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.eyelid {
+  position: absolute;
+  top: 43.4%;
+  width: 15.8%;
+  height: 4.6%;
+  border-radius: 52% 52% 46% 46%;
+  background: linear-gradient(180deg, rgba(99, 55, 72, .9), rgba(216, 151, 137, .96));
+  opacity: 0;
+  transform: scaleY(.05);
+  transform-origin: center top;
+  filter: blur(.15px);
+}
+
+.eyelid-left {
+  left: 27.2%;
+  transform: rotate(3deg) scaleY(.05);
+}
+
+.eyelid-right {
+  right: 27.5%;
+  transform: rotate(-3deg) scaleY(.05);
+}
+
+.face.blinking .eyelid {
+  opacity: .96;
+  animation: natural-blink 180ms ease-in-out 1;
+}
+
+.speech-glow {
+  position: absolute;
+  left: 35%;
+  right: 35%;
+  bottom: 23%;
+  height: 8%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(194, 108, 239, .34), transparent 70%);
+  opacity: 0;
+  filter: blur(6px);
+}
+
+.face.listening {
+  filter: drop-shadow(0 0 24px rgba(187, 112, 255, .62)) drop-shadow(0 22px 34px rgba(0,0,0,.58));
+}
+
+.face.listening .face-base {
+  filter: brightness(1.045) saturate(1.05);
+}
+
+.face.thinking .face-base {
+  transform: rotate(-1.1deg) translateY(1px);
+  filter: brightness(.98);
+}
+
+.face.speaking .speech-glow {
+  opacity: 1;
+  animation: speech-light 430ms ease-in-out infinite alternate;
+}
+
+.face.speaking .face-base {
+  filter: brightness(1.025);
+}
+
+.panel {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + var(--safe-bottom));
+  height: min(45vh, 45dvh, 390px);
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  z-index: 4;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 24px;
+  background: var(--panel);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 26px 75px rgba(0,0,0,.7);
+  transform: translateY(calc(100% + 34px));
+  visibility: hidden;
+  transition: transform 360ms cubic-bezier(.2,.75,.2,1), visibility 0s linear 360ms;
+}
+
+.app.open .panel {
+  transform: translateY(0);
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.app.open .presence {
+  transform: translateY(calc(-24vh + var(--safe-top))) scale(.67);
+  filter: saturate(.96);
+}
+
+.messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 18px 13px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(143,78,232,.45) transparent;
+}
+
+.msg {
+  max-width: 88%;
+  margin: 0 0 10px;
+  padding: 10px 13px;
+  border-radius: 17px;
+  line-height: 1.36;
+  font-size: 15px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg.user {
+  margin-left: auto;
+  background: var(--violet-user);
+}
+
+.msg.wia {
+  background: var(--wia-bubble);
+  border: 1px solid rgba(255,255,255,.09);
+}
+
+.status {
+  min-height: 20px;
+  padding: 0 12px 4px;
+  text-align: center;
+  font-size: 11px;
+  opacity: .68;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: end;
+  gap: 8px;
+  padding: 9px;
+  border-top: 1px solid rgba(255,255,255,.1);
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 48px;
+  max-height: 112px;
+  resize: none;
+  overflow-y: auto;
+  scrollbar-width: none;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 16px;
+  background: #160c21;
+  color: #fff;
+  padding: 13px 14px;
+  outline: none;
+  line-height: 1.35;
+}
+
+.composer textarea::-webkit-scrollbar {
+  display: none;
+}
+
+.composer textarea:focus {
+  border-color: rgba(178,113,255,.62);
+  box-shadow: 0 0 0 3px rgba(143,78,232,.13);
+}
+
+.composer button {
+  min-width: 72px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--violet);
+  color: #fff;
+  padding: 0 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.composer button:disabled,
+.composer textarea:disabled {
+  opacity: .58;
+}
+
+@keyframes idle-breathe {
+  0%, 100% { transform: translateY(0) scale(1); filter: brightness(1); }
+  50% { transform: translateY(-2px) scale(1.004); filter: brightness(1.015); }
+}
+
+@keyframes natural-blink {
+  0%, 100% { transform: scaleY(.05); opacity: 0; }
+  42%, 62% { transform: scaleY(1); opacity: .96; }
+}
+
+@keyframes speech-light {
+  from { transform: scale(.86); opacity: .38; }
+  to { transform: scale(1.14); opacity: .78; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .face {
+    animation: none;
+  }
+  .presence,
+  .panel,
+  .face-base {
+    transition-duration: 1ms;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .face {
+    width: min(38vh, 210px);
+  }
+  .app.open .presence {
+    transform: translateY(-18vh) scale(.62);
+  }
+  .panel {
+    height: min(58dvh, 320px);
+  }
+}
