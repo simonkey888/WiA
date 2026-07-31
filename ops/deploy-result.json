@@ -1,11 +1,17 @@
 {
   "claim": "WIA-WORKERS-FIRST-DEPLOY",
-  "recorded_at_utc": "2026-07-31T12:38:48.562Z",
-  "commit": "597384838aa69e9695ea896389bca6213e84924e",
+  "recorded_at_utc": "2026-07-31T12:40:58.305Z",
+  "commit": "1ad51e639b2d83c4c13d4247e4438c8f94023728",
   "branch": "feat/wia-beta-v1",
+  "token_shape": {
+    "length": 12,
+    "normalized_length": 12,
+    "variants": 1
+  },
   "deploy": {
     "ok": false,
     "http": 400,
+    "attempts": 1,
     "response": {
       "success": false,
       "errors": [
