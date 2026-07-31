@@ -1,7 +1,7 @@
 {
   "claim": "WIA-WORKERS-FIRST-DEPLOY",
-  "recorded_at_utc": "2026-07-31T13:46:51.504Z",
-  "commit": "a1e5f5d6fd1104e0897cfe49dee957ab562a949e",
+  "recorded_at_utc": "2026-07-31T14:40:31.240Z",
+  "commit": "a6a8bb3f156b443632a48229b7b1728f97488fe7",
   "branch": "feat/wia-beta-v1",
   "token_shape": {
     "length": 53,
@@ -15,12 +15,12 @@
     "response": {
       "result": {
         "created_on": "2026-07-31T05:13:40.833353Z",
-        "modified_on": "2026-07-31T13:46:32.467615Z",
+        "modified_on": "2026-07-31T14:38:28.377461Z",
         "id": "wia",
         "tag": "53228d86cfbb4820881e1c998b322086",
         "entry_point": "index.js",
         "tags": [],
-        "deployment_id": "99fc280eb4514dc08a210e194b2eec35",
+        "deployment_id": "16501a579f48495c8be78664be55d839",
         "tail_consumers": null,
         "logpush": false,
         "observability": {
@@ -29,7 +29,7 @@
         },
         "has_assets": false,
         "has_modules": true,
-        "etag": "aca1a3fd17c1f40b40cb40fd3c44f388a2affe3fe863a64d7bd283e4476b60b7",
+        "etag": "326361ef4f449813186decf5b78aad645423fa120b4a32ea0143d4952bd78eac",
         "handlers": [
           "fetch"
         ],
@@ -44,36 +44,24 @@
     }
   },
   "health": {
-    "ok": true,
+    "ok": false,
     "http": 200,
     "response": {
       "ok": true,
       "worker": "wia",
-      "workset": "WIA-CF-FIRST-LIVE-001",
-      "marker": "WIA_CF_FIRST_LIVE_001",
+      "workset": "WIA-FACE-CANONICAL-V1",
+      "marker": "WIA_FACE_CANONICAL_V1",
       "model": "@cf/zai-org/glm-4.7-flash",
       "fallback": "@cf/qwen/qwen3-30b-a3b-fp8",
       "mobile_first": true,
-      "pwa": false
+      "pwa": true,
+      "face_asset": "/assets/wia-face-base.v1.svg"
     }
   },
   "chat": {
     "ok": false,
-    "http": 503,
-    "response": {
-      "ok": false,
-      "error": "MODEL_UNAVAILABLE",
-      "failures": [
-        {
-          "model": "@cf/zai-org/glm-4.7-flash",
-          "error": "EMPTY_MODEL_RESPONSE"
-        },
-        {
-          "model": "@cf/qwen/qwen3-30b-a3b-fp8",
-          "error": "EMPTY_MODEL_RESPONSE"
-        }
-      ]
-    }
+    "http": 0,
+    "response": null
   },
   "status": "BLOCKED"
 }
