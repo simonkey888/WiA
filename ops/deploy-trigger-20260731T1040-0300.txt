@@ -1,0 +1,1 @@
+Trigger WiA Workers-first deployment after updating GitHub Actions secrets.
