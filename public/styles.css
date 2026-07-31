@@ -40,6 +40,18 @@ textarea {
   font: inherit;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .app {
   position: relative;
   width: min(100vw, 480px);
@@ -47,8 +59,7 @@ textarea {
   min-height: 100svh;
   margin: 0 auto;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 34%, rgba(83, 31, 133, 0.48) 0, rgba(23, 11, 41, 0.92) 44%, #09050f 100%);
+  background: radial-gradient(circle at 50% 34%, rgba(83, 31, 133, 0.48) 0, rgba(23, 11, 41, 0.92) 44%, #09050f 100%);
   isolation: isolate;
 }
 
@@ -81,14 +92,22 @@ textarea {
   filter: drop-shadow(0 0 0.55rem rgba(206, 156, 255, .72)) drop-shadow(0 22px 34px rgba(0,0,0,.58));
 }
 
-.face-base {
+.face-raster {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translateZ(0);
+  transition: filter 260ms ease, transform 260ms ease;
+}
+
+.face-layer {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
   pointer-events: none;
-  transform: translateZ(0);
-  transition: filter 260ms ease, transform 260ms ease;
 }
 
 .face-expression-layer {
@@ -141,11 +160,11 @@ textarea {
   filter: drop-shadow(0 0 24px rgba(187, 112, 255, .62)) drop-shadow(0 22px 34px rgba(0,0,0,.58));
 }
 
-.face.listening .face-base {
+.face.listening .face-raster {
   filter: brightness(1.045) saturate(1.05);
 }
 
-.face.thinking .face-base {
+.face.thinking .face-raster {
   transform: rotate(-1.1deg) translateY(1px);
   filter: brightness(.98);
 }
@@ -155,7 +174,7 @@ textarea {
   animation: speech-light 430ms ease-in-out infinite alternate;
 }
 
-.face.speaking .face-base {
+.face.speaking .face-raster {
   filter: brightness(1.025);
 }
 
@@ -300,24 +319,14 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .face {
-    animation: none;
-  }
+  .face { animation: none; }
   .presence,
   .panel,
-  .face-base {
-    transition-duration: 1ms;
-  }
+  .face-raster { transition-duration: 1ms; }
 }
 
 @media (orientation: landscape) and (max-height: 560px) {
-  .face {
-    width: min(38vh, 210px);
-  }
-  .app.open .presence {
-    transform: translateY(-18vh) scale(.62);
-  }
-  .panel {
-    height: min(58dvh, 320px);
-  }
+  .face { width: min(38vh, 210px); }
+  .app.open .presence { transform: translateY(-18vh) scale(.62); }
+  .panel { height: min(58dvh, 320px); }
 }
