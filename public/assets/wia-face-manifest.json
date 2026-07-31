@@ -7,20 +7,37 @@
     "width": 175,
     "height": 205
   },
-  "method": "SVG triangulated reconstruction from the exact extracted reference face",
+  "method": "exact SVG triangulation split into transparent render layers",
   "processing": [
     "crop",
     "connected-white-background removal",
     "adaptive facial feature sampling",
     "Delaunay triangulation",
-    "silhouette clip path"
+    "silhouette clip path",
+    "lossless layer partition"
   ],
-  "asset": {
-    "path": "wia-face-base.v1.svg",
-    "sha256": "9e07a33ff3223147bbe3d1bc8addef63f394e07f249d748d4a657e689ac88269",
-    "bytes": 36269,
+  "canonical_composite": {
+    "sha256_before_layer_partition": "9e07a33ff3223147bbe3d1bc8addef63f394e07f249d748d4a657e689ac88269",
+    "bytes_before_layer_partition": 36269,
     "content_type": "image/svg+xml"
   },
+  "layers": [
+    {
+      "path": "wia-face-base.v1.svg",
+      "sha256": "6e099cef3600f62766be8bd2431d5035fbbc50ce5f16fe14c53a741c3e8de0cc",
+      "bytes": 9617
+    },
+    {
+      "path": "wia-face-layer-2.v1.svg",
+      "sha256": "6ed68cbd20d3870a6fee913005dae68fecf1f921bf1c77e8bdf209e17f0aa049",
+      "bytes": 9507
+    },
+    {
+      "path": "wia-face-layer-3-4.v1.svg",
+      "sha256": "3bfe50ca3c47b761be90e17d285951f7db05c156607c2e06f7a79a5116926a0d",
+      "bytes": 18369
+    }
+  ],
   "dimensions": {
     "viewBox": "0 0 480 570"
   },
