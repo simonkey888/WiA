@@ -1,0 +1,19 @@
+{
+  "name": "WiA",
+  "short_name": "WiA",
+  "description": "Una presencia conversacional expresiva.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0d0716",
+  "background_color": "#09050f",
+  "icons": [
+    {
+      "src": "/assets/wia-face-base.v1.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
