@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "wia",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-31",
+  "account_id": "b21fa81d12acb663798f9f7c51801955",
+  "workers_dev": true,
+  "ai": {
+    "binding": "AI"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
