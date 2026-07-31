@@ -7,6 +7,8 @@
   <meta name="color-scheme" content="dark">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/assets/wia-face-base.v1.svg" as="image" type="image/svg+xml">
+  <link rel="preload" href="/assets/wia-face-layer-2.v1.svg" as="image" type="image/svg+xml">
+  <link rel="preload" href="/assets/wia-face-layer-3-4.v1.svg" as="image" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
   <title>WiA</title>
 </head>
@@ -14,7 +16,12 @@
   <main class="app" id="app">
     <section class="presence" aria-label="WiA">
       <div class="face" id="face" role="button" tabindex="0" aria-label="Abrir o hablar con WiA">
-        <img class="face-base" src="/assets/wia-face-base.v1.svg" alt="WiA, rostro femenino low-poly violeta" draggable="false">
+        <div class="face-raster" aria-hidden="true">
+          <img class="face-base face-layer" src="/assets/wia-face-base.v1.svg" alt="" draggable="false">
+          <img class="face-layer" src="/assets/wia-face-layer-2.v1.svg" alt="" draggable="false">
+          <img class="face-layer" src="/assets/wia-face-layer-3-4.v1.svg" alt="" draggable="false">
+        </div>
+        <span class="sr-only">WiA, rostro femenino low-poly violeta</span>
         <div class="face-expression-layer" aria-hidden="true">
           <span class="eyelid eyelid-left"></span>
           <span class="eyelid eyelid-right"></span>
