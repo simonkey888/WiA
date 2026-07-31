@@ -1,0 +1,20 @@
+{
+  "claim": "WIA-FACE-CANONICAL-V1-SOURCE",
+  "status": "PRE_DEPLOY",
+  "workset": "WIA-FACE-CANONICAL-V1",
+  "marker": "WIA_FACE_CANONICAL_V1",
+  "reference_asset_sha256": "d209af42a04a0a3c974a5235dfd9b9fc8ee8578f370121c77cddb8883f092d67",
+  "no_procedural_face": true,
+  "initial_chat_hidden": true,
+  "voice_priority": [
+    "es-419",
+    "es-MX",
+    "es-US",
+    "es-AR",
+    "es-*"
+  ],
+  "deployment": "PENDING",
+  "face_asset_manifest": "public/assets/wia-face-manifest.json",
+  "canonical_composite_sha256": "9e07a33ff3223147bbe3d1bc8addef63f394e07f249d748d4a657e689ac88269",
+  "reference_match_method": "exact extracted reference triangulation, losslessly partitioned into three render layers"
+}
