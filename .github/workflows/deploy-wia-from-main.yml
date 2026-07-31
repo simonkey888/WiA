@@ -18,10 +18,12 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       BASE_URL: https://wia.simondalmasso44.workers.dev
+      EXPECTED_WORKSET: WIA-FACE-CANONICAL-V1
+      EXPECTED_MARKER: WIA_FACE_CANONICAL_V1
     steps:
       - name: Checkout default branch for evidence
         uses: actions/checkout@v6
@@ -32,8 +34,38 @@ jobs:
           ref: feat/wia-beta-v1
           path: app
 
+      - name: Resolve exact source commit
+        id: source
+        shell: bash
+        run: echo "sha=$(git -C app rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate source
+        id: source_validation
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Wrangler dry-run
+        id: dry_run
+        if: steps.source_validation.outcome == 'success'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.DEPLOY_NOW }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.116.0"
+          workingDirectory: app
+          command: deploy --dry-run
+
       - name: Deploy Worker
         id: deploy
+        if: steps.source_validation.outcome == 'success' && steps.dry_run.outcome == 'success'
         continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
@@ -43,16 +75,19 @@ jobs:
           workingDirectory: app
           command: deploy
 
-      - name: Verify health
+      - name: Verify root and health
         id: health
         if: steps.deploy.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
+          root_http=$(curl -sS --max-time 20 -D /tmp/root.headers -o /tmp/root.html -w '%{http_code}' "$BASE_URL/")
+          test "$root_http" = "200"
+          grep -qi '^cache-control:.*no-store' /tmp/root.headers
           for attempt in $(seq 1 24); do
             http=$(curl -sS --max-time 20 -o /tmp/health.json -w '%{http_code}' "$BASE_URL/api/health" || true)
-            if [ "$http" = "200" ] && jq -e '.ok == true and .marker == "WIA_CF_FIRST_LIVE_001"' /tmp/health.json >/dev/null 2>&1; then
+            if [ "$http" = "200" ] && jq -e --arg workset "$EXPECTED_WORKSET" --arg marker "$EXPECTED_MARKER" '.ok == true and .worker == "wia" and .workset == $workset and .marker == $marker' /tmp/health.json >/dev/null 2>&1; then
               exit 0
             fi
             sleep 5
@@ -60,9 +95,35 @@ jobs:
           cat /tmp/health.json || true
           exit 1
 
+      - name: Verify canonical face assets
+        id: asset
+        if: steps.deploy.outcome == 'success' && steps.health.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/assets.jsonl
+          for path in \
+            /assets/wia-face-base.v1.svg \
+            /assets/wia-face-layer-2.v1.svg \
+            /assets/wia-face-layer-3-4.v1.svg \
+            /assets/wia-face-manifest.json; do
+            safe=$(echo "$path" | tr '/.' '__')
+            http=$(curl -sS --max-time 30 -D "/tmp/${safe}.headers" -o "/tmp/${safe}.body" -w '%{http_code}' "$BASE_URL$path")
+            test "$http" = "200"
+            test -s "/tmp/${safe}.body"
+            if [[ "$path" == *.svg ]]; then
+              grep -qi '^content-type:.*image/svg+xml' "/tmp/${safe}.headers"
+            fi
+            sha=$(sha256sum "/tmp/${safe}.body" | awk '{print $1}')
+            bytes=$(wc -c < "/tmp/${safe}.body")
+            jq -nc --arg path "$path" --arg sha "$sha" --argjson bytes "$bytes" '{path:$path,sha256:$sha,bytes:$bytes}' >> /tmp/assets.jsonl
+          done
+          jq -s '.' /tmp/assets.jsonl > /tmp/assets.json
+
       - name: Verify real chat
         id: chat
-        if: steps.deploy.outcome == 'success' && steps.health.outcome == 'success'
+        if: steps.deploy.outcome == 'success' && steps.health.outcome == 'success' && steps.asset.outcome == 'success'
         continue-on-error: true
         shell: bash
         run: |
@@ -78,10 +139,14 @@ jobs:
         if: always()
         shell: bash
         env:
+          SOURCE_COMMIT: ${{ steps.source.outputs.sha }}
+          SOURCE_VALIDATION_OUTCOME: ${{ steps.source_validation.outcome }}
+          DRY_RUN_OUTCOME: ${{ steps.dry_run.outcome }}
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
           DEPLOY_STDERR: ${{ steps.deploy.outputs.command-stderr }}
           DEPLOY_STDOUT: ${{ steps.deploy.outputs.command-output }}
           HEALTH_OUTCOME: ${{ steps.health.outcome }}
+          ASSET_OUTCOME: ${{ steps.asset.outcome }}
           CHAT_OUTCOME: ${{ steps.chat.outcome }}
         run: |
           mkdir -p ops
@@ -90,21 +155,24 @@ jobs:
           const clean = v => String(v || '').slice(0, 8000).replace(/[A-Za-z0-9_-]{30,}/g, '[REDACTED]');
           const read = p => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
           const result = {
-            claim: 'WIA-WORKERS-FIRST-DEPLOY-FROM-MAIN',
+            claim: 'WIA-FACE-CANONICAL-V1-DEPLOY',
             recorded_at_utc: new Date().toISOString(),
             source_branch: 'feat/wia-beta-v1',
-            source_commit: process.env.GITHUB_SHA,
+            source_commit: process.env.SOURCE_COMMIT || '',
+            source_validation: { outcome: process.env.SOURCE_VALIDATION_OUTCOME || 'skipped' },
+            wrangler_dry_run: { outcome: process.env.DRY_RUN_OUTCOME || 'skipped' },
             deploy: { outcome: process.env.DEPLOY_OUTCOME || 'unknown', stdout: clean(process.env.DEPLOY_STDOUT), stderr: clean(process.env.DEPLOY_STDERR) },
             health: { outcome: process.env.HEALTH_OUTCOME || 'skipped', response: read('/tmp/health.json') },
+            assets: { outcome: process.env.ASSET_OUTCOME || 'skipped', responses: read('/tmp/assets.json') },
             chat: { outcome: process.env.CHAT_OUTCOME || 'skipped', response: read('/tmp/chat.json') }
           };
-          result.status = result.deploy.outcome === 'success' && result.health.outcome === 'success' && result.chat.outcome === 'success' ? 'PASS' : 'BLOCKED';
+          result.status = [result.source_validation.outcome, result.wrangler_dry_run.outcome, result.deploy.outcome, result.health.outcome, result.assets.outcome, result.chat.outcome].every(v => v === 'success') ? 'PASS' : 'BLOCKED';
           fs.writeFileSync('ops/deploy-main-result.json', JSON.stringify(result, null, 2) + '\n');
           NODE
           git config user.name github-actions
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add ops/deploy-main-result.json
-          git commit -m "ops: record WiA Workers-first deploy" || true
+          git commit -m "ops: record WiA canonical face deploy" || true
           git push origin HEAD:main
 
       - name: Enforce result
