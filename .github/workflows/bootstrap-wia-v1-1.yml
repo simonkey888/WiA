@@ -96,9 +96,13 @@ jobs:
           (root/'public/assets/wia-face-v1-1-manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
 
+          rm -rf "$tmp/source/.github/workflows"
+          mkdir -p "$tmp/source/.github/workflows"
+          cp -a .github/workflows/. "$tmp/source/.github/workflows/"
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a "$tmp/source/." .
           rm -f public/assets/wia-face-base.v1.svg public/assets/wia-face-layer-2.v1.svg public/assets/wia-face-layer-3-4.v1.svg public/assets/wia-face-manifest.json
+          test -z "$(git diff -- .github/workflows)"
           git config user.name github-actions
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
