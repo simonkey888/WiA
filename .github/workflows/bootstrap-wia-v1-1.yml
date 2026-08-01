@@ -50,3 +50,5 @@ jobs:
           MINIMUM_RECOVERY=Inspect the preserved bootstrap run log and correct only the failing materialization step.
           EOF
           gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body-file /tmp/blocker.txt
+
+# retry: corrected archive sha bb1d033d5e70d5d8299b53216c4b67be6cd1f01a44547294fb4ee3f5644cb84a
