@@ -11,6 +11,7 @@ if [ -d public/icons ]; then
   cp -a public/icons "$tmp/preserve/public/icons"
 fi
 
+sha256sum ops/materialize-v8/source-*.b64
 cat ops/materialize-v8/source-*.b64 > "$tmp/source.tar.gz.b64"
 base64 -d "$tmp/source.tar.gz.b64" > "$tmp/source.tar.gz"
 source_actual=$(sha256sum "$tmp/source.tar.gz" | awk '{print $1}')
@@ -32,6 +33,7 @@ grep -q 'MAX_TOKENS = 180' "$tmp/source/src/index.js"
 grep -q 'CHAT_RATE_LIMITER' "$tmp/source/wrangler.jsonc"
 
 mkdir -p "$tmp/source/public/assets"
+sha256sum ops/materialize-v8/face-*.b64
 cat ops/materialize-v8/face-*.b64 > "$tmp/face.webp.b64"
 base64 -d "$tmp/face.webp.b64" > "$tmp/source/public/assets/wia-face-v1-1.webp"
 face_expected="9c9d36f7e8b24eaa5e80628b1eb527931d8ff5d4f01281f0102a84a994241649"
