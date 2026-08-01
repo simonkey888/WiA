@@ -1,4 +1,4 @@
-name: Bootstrap WiA V1.1 Exact Source
+name: Execute WiA V1.1 From Staged Exact Source
 
 on:
   push:
@@ -13,42 +13,115 @@ permissions:
   issues: write
 
 concurrency:
-  group: bootstrap-wia-face-voice-v1-1
+  group: wia-face-voice-ux-v1-1-execution
   cancel-in-progress: false
 
+env:
+  BASE_URL: https://wia.simondalmasso44.workers.dev
+  EXPECTED_WORKSET: WIA-FACE-VOICE-UX-V1_1
+  EXPECTED_MARKER: WIA_FACE_VOICE_UX_V1_1
+  SOURCE_BRANCH: feat/wia-face-voice-ux-v1-1
+  ISSUE_NUMBER: "2"
+  WRANGLER_VERSION: "4.116.0"
+
 jobs:
-  materialize:
+  materialize-test-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.DEPLOY_NOW }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Checkout bootstrap branch
+      - name: Checkout target branch
         uses: actions/checkout@v6
         with:
           ref: feat/wia-face-voice-ux-v1-1
           fetch-depth: 0
 
-      - name: Materialize deterministic source and raster assets
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Materialize exact source and canonical raster assets
+        id: materialize
         shell: bash
         run: |
-          set -euo pipefail
-          bash ops/materialize-wia-v1-1.sh
+          set -Eeuo pipefail
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          cat ops/materialize-v9/source-*.b64 | base64 -d > "$tmp/source.tar.gz"
+          archive_sha=$(sha256sum "$tmp/source.tar.gz" | awk '{print $1}')
+          test "$archive_sha" = "f29e55ad5d0c0af25b5c869969aadfdbad6c3b27f315e3a64a132a1638058ad5"
+          mkdir -p "$tmp/source"
+          tar -xzf "$tmp/source.tar.gz" -C "$tmp/source"
+          test -s "$tmp/source/src/index.js"
+          test -s "$tmp/source/public/assets/wia-face-v1-1-source.svg"
+          grep -q 'WIA-FACE-VOICE-UX-V1_1' "$tmp/source/src/index.js"
+          grep -q 'CHAT_RATE_LIMITER' "$tmp/source/wrangler.jsonc"
 
-      - name: Append bootstrap blocker to Issue 2
-        if: failure()
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq librsvg2-bin webp imagemagick
+          rsvg-convert -w 760 -h 849 -o "$tmp/source/public/assets/wia-face-v1-1.png" "$tmp/source/public/assets/wia-face-v1-1-source.svg"
+          cwebp -quiet -lossless -z 9 "$tmp/source/public/assets/wia-face-v1-1.png" -o "$tmp/source/public/assets/wia-face-v1-1.webp"
+          mkdir -p "$tmp/source/public/icons"
+          convert "$tmp/source/public/assets/wia-face-v1-1.png" -background '#0b0712' -gravity center -extent 849x849 -resize 192x192 -strip "$tmp/source/public/icons/icon-192.png"
+          convert "$tmp/source/public/assets/wia-face-v1-1.png" -background '#0b0712' -gravity center -extent 849x849 -resize 512x512 -strip "$tmp/source/public/icons/icon-512.png"
+          test -s "$tmp/source/public/assets/wia-face-v1-1.webp"
+          test -s "$tmp/source/public/assets/wia-face-v1-1.png"
+          test -s "$tmp/source/public/icons/icon-192.png"
+          test -s "$tmp/source/public/icons/icon-512.png"
+
+          ARCHIVE_SHA="$archive_sha" python3 - "$tmp/source" <<'PY'
+          import hashlib, json, os, pathlib, sys
+          root=pathlib.Path(sys.argv[1])
+          def item(rel, public, ctype):
+              p=root/rel; data=p.read_bytes()
+              return {'path':public,'content_type':ctype,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+          manifest={
+            'asset_version':'WIA_FACE_V1_1',
+            'source':'controlled manual low-poly portrait derived from Simon canonical reference',
+            'identity_policy':'same female bob identity; raster runtime; no automatic triangulation',
+            'source_archive_sha256':os.environ['ARCHIVE_SHA'],
+            'principal':'/assets/wia-face-v1-1.webp',
+            'fallback':'/assets/wia-face-v1-1.png',
+            'width':760,'height':849,'alpha':True,
+            'source_svg_active_in_runtime':False,
+            'old_triangulated_assets_active':False,
+            'assets':[
+              item('public/assets/wia-face-v1-1.webp','/assets/wia-face-v1-1.webp','image/webp'),
+              item('public/assets/wia-face-v1-1.png','/assets/wia-face-v1-1.png','image/png')],
+          }
+          (root/'public/assets/wia-face-v1-1-manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$tmp/source/." .
+          rm -f public/assets/wia-face-base.v1.svg public/assets/wia-face-layer-2.v1.svg public/assets/wia-face-layer-3-4.v1.svg public/assets/wia-face-manifest.json
+          git config user.name github-actions
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "feat: implement WiA V1.1 face and voice UX"
+          git push origin HEAD:refs/heads/feat/wia-face-voice-ux-v1-1
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Execute complete technical gates, deploy and checkpoint
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
+        run: bash ops/run-wia-v1-1.sh
+
+      - name: Append materialization blocker to Issue 2
+        if: failure() && steps.materialize.outcome == 'failure'
+        shell: bash
         run: |
           cat > /tmp/blocker.txt <<EOF
-          ARQ_BOOTSTRAP_BLOCKER
+          WIA_FACE_VOICE_UX_V1_1
 
-          WORKSET=WIA-FACE-VOICE-UX-V1_1
+          STATUS=BLOCKED
           BLOCKING_GATE=GATE_1_SOURCE_BRANCH
-          EXACT_ERROR=Deterministic source or raster materialization failed in GitHub Actions run $GITHUB_RUN_ID.
+          EXACT_ERROR=Exact source or raster materialization failed; causal output is preserved in GitHub Actions run $GITHUB_RUN_ID.
           CURRENT_COMMIT=$GITHUB_SHA
-          RUN_URL=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-          MINIMUM_RECOVERY=Inspect the preserved bootstrap run log and correct only the failing materialization step.
+          REMOTE_STATE=UNCHANGED_BY_MATERIALIZATION_FAILURE
+          MINIMUM_RECOVERY=Correct only the first failed command in https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           EOF
-          gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body-file /tmp/blocker.txt
-
-# retry 4: identify corrupted staged chunk
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file /tmp/blocker.txt
