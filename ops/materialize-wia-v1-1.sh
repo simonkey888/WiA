@@ -13,7 +13,7 @@ fi
 
 cat ops/materialize-v8/source-*.b64 > "$tmp/source.tar.gz.b64"
 base64 -d "$tmp/source.tar.gz.b64" > "$tmp/source.tar.gz"
-source_expected="5c5ffd4da0a8eabbc7129dd0477d5a58942e17826eed08486670f6c2c9f9fc77"
+source_expected="bb1d033d5e70d5d8299b53216c4b67be6cd1f01a44547294fb4ee3f5644cb84a"
 source_actual=$(sha256sum "$tmp/source.tar.gz" | awk '{print $1}')
 test "$source_actual" = "$source_expected"
 
