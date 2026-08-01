@@ -1,3 +1,7 @@
+import { VOICE_SELECTOR_VERSION, ACTIVE_PRESET, chooseVoice } from "./voice-selector.js";
+
+const CACHE_PREFIX = "wia-";
+
 const app = document.getElementById("app");
 const face = document.getElementById("face");
 const panel = document.getElementById("panel");
@@ -5,176 +9,76 @@ const form = document.getElementById("form");
 const input = document.getElementById("input");
 const messages = document.getElementById("messages");
 const statusEl = document.getElementById("status");
+const submitButton = form.querySelector("button");
 
-const HOLD_DELAY_MS = 380;
-let holdTimer = 0;
-let longPressStarted = false;
-let pointerId = null;
-let recognition = null;
 let history = [];
-let isSending = false;
-let blinkTimer = 0;
-let activeUtterance = null;
+let pressTimer = 0;
+let pressActive = false;
+let longPressTriggered = false;
+let recognition = null;
+let speaking = false;
+let speechGeneration = 0;
+let selectedVoice = null;
+let voiceInventory = [];
 
-function setFaceState(name, enabled) {
-  face.classList.toggle(name, Boolean(enabled));
+
+function clientId() {
+  const key = "wia-client-v1-1";
+  let value = localStorage.getItem(key);
+  if (!value) {
+    value = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(key, value);
+  }
+  return value;
 }
 
-function setOpen(open) {
+function setVisualHeight() {
+  const height = window.visualViewport?.height || window.innerHeight;
+  document.documentElement.style.setProperty("--visual-height", `${Math.round(height)}px`);
+  requestAnimationFrame(scrollToLastMessage);
+}
+setVisualHeight();
+window.addEventListener("resize", setVisualHeight, { passive: true });
+window.visualViewport?.addEventListener("resize", setVisualHeight, { passive: true });
+window.visualViewport?.addEventListener("scroll", setVisualHeight, { passive: true });
+
+function setChatOpen(open) {
   app.classList.toggle("open", open);
   panel.toggleAttribute("inert", !open);
   panel.setAttribute("aria-hidden", String(!open));
   if (open) {
     requestAnimationFrame(() => {
-      messages.scrollTop = messages.scrollHeight;
-      setTimeout(() => messages.scrollTop = messages.scrollHeight, 80);
+      scrollToLastMessage();
+      input.focus({ preventScroll: true });
     });
+  } else {
+    input.blur();
   }
 }
 
 function toggleChat() {
-  setOpen(!app.classList.contains("open"));
+  setChatOpen(!app.classList.contains("open"));
 }
 
-function updateVisualHeight() {
-  const height = window.visualViewport?.height || window.innerHeight;
-  document.documentElement.style.setProperty("--visual-height", `${Math.round(height)}px`);
-  if (app.classList.contains("open")) {
-    requestAnimationFrame(() => {
-      messages.scrollTop = messages.scrollHeight;
-    });
-  }
+function scrollToLastMessage() {
+  messages.scrollTop = messages.scrollHeight;
 }
-
-window.visualViewport?.addEventListener("resize", updateVisualHeight);
-window.visualViewport?.addEventListener("scroll", updateVisualHeight);
-window.addEventListener("resize", updateVisualHeight);
-updateVisualHeight();
-
-function scheduleBlink() {
-  clearTimeout(blinkTimer);
-  const delay = 4000 + Math.random() * 5000;
-  blinkTimer = window.setTimeout(() => {
-    if (!face.classList.contains("listening")) {
-      setFaceState("blinking", true);
-      window.setTimeout(() => setFaceState("blinking", false), 210);
-    }
-    scheduleBlink();
-  }, delay);
-}
-scheduleBlink();
 
 function addMessage(role, text) {
   const element = document.createElement("div");
   element.className = `msg ${role === "user" ? "user" : "wia"}`;
   element.textContent = text;
   messages.append(element);
-  messages.scrollTop = messages.scrollHeight;
-  history.push({
-    role: role === "user" ? "user" : "assistant",
-    content: text,
-  });
-  history = history.slice(-12);
+  history.push({ role: role === "user" ? "user" : "assistant", content: text });
+  history = history.slice(-8);
+  scrollToLastMessage();
 }
 
-function resizeComposer() {
+function autoGrowInput() {
   input.style.height = "auto";
   input.style.height = `${Math.min(input.scrollHeight, 112)}px`;
 }
-input.addEventListener("input", resizeComposer);
-
-function getSpanishVoice() {
-  const voices = speechSynthesis.getVoices();
-  const exactOrder = ["es-419", "es-MX", "es-US", "es-AR"];
-  for (const language of exactOrder) {
-    const voice = voices.find((candidate) => candidate.lang.toLowerCase() === language.toLowerCase());
-    if (voice) return voice;
-  }
-  return voices.find((voice) => voice.lang.toLowerCase().startsWith("es-")) || null;
-}
-
-function stopSpeaking() {
-  if (!("speechSynthesis" in window)) return;
-  speechSynthesis.cancel();
-  activeUtterance = null;
-  setFaceState("speaking", false);
-}
-
-function speak(text) {
-  if (!("speechSynthesis" in window)) return;
-  stopSpeaking();
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  const voice = getSpanishVoice();
-  utterance.voice = voice;
-  utterance.lang = voice?.lang || "es-419";
-  utterance.rate = 0.97;
-  utterance.pitch = 1.02;
-  utterance.onstart = () => setFaceState("speaking", true);
-  utterance.onend = () => {
-    activeUtterance = null;
-    setFaceState("speaking", false);
-  };
-  utterance.onerror = () => {
-    activeUtterance = null;
-    setFaceState("speaking", false);
-  };
-  activeUtterance = utterance;
-  speechSynthesis.speak(utterance);
-}
-
-if ("speechSynthesis" in window) {
-  speechSynthesis.getVoices();
-  speechSynthesis.addEventListener?.("voiceschanged", () => speechSynthesis.getVoices(), { once: true });
-}
-
-async function send(text) {
-  const message = text.trim();
-  if (!message || isSending) return;
-
-  isSending = true;
-  setOpen(true);
-  addMessage("user", message);
-  input.value = "";
-  resizeComposer();
-  input.disabled = true;
-  form.querySelector("button").disabled = true;
-  statusEl.textContent = "Pensando…";
-  setFaceState("thinking", true);
-
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "content-type": "application/json; charset=utf-8" },
-      body: JSON.stringify({
-        message,
-        history: history.slice(0, -1),
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok || !data.ok || typeof data.reply !== "string" || !data.reply.trim()) {
-      throw new Error(data.error || "No respondió");
-    }
-    addMessage("assistant", data.reply);
-    statusEl.textContent = data.model || "";
-    speak(data.reply);
-  } catch (error) {
-    statusEl.textContent = `Error: ${error.message}`;
-  } finally {
-    isSending = false;
-    setFaceState("thinking", false);
-    input.disabled = false;
-    form.querySelector("button").disabled = false;
-    input.focus({ preventScroll: true });
-    messages.scrollTop = messages.scrollHeight;
-  }
-}
-
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  send(input.value);
-});
-
+input.addEventListener("input", autoGrowInput);
 input.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
@@ -182,100 +86,240 @@ input.addEventListener("keydown", (event) => {
   }
 });
 
-function createRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return null;
-
-  const instance = new SpeechRecognition();
-  instance.lang = "es-AR";
-  instance.interimResults = false;
-  instance.continuous = false;
-  instance.maxAlternatives = 1;
-
-  instance.onstart = () => {
-    setFaceState("listening", true);
-    statusEl.textContent = "Te escucho…";
+function serializeVoice(voice) {
+  return {
+    name: voice.name,
+    lang: voice.lang,
+    localService: Boolean(voice.localService),
+    default: Boolean(voice.default),
+    voiceURI: voice.voiceURI,
   };
-  instance.onresult = (event) => {
-    const transcript = event.results?.[0]?.[0]?.transcript?.trim();
-    if (transcript) send(transcript);
-  };
-  instance.onerror = (event) => {
-    if (event.error !== "aborted" && event.error !== "no-speech") {
-      setOpen(true);
-      statusEl.textContent = `Micrófono: ${event.error}`;
-    }
-  };
-  instance.onend = () => {
-    setFaceState("listening", false);
-    recognition = null;
-  };
-  return instance;
 }
 
-function beginHoldToTalk() {
-  longPressStarted = true;
-  stopSpeaking();
-  recognition = createRecognition();
-  if (!recognition) {
-    setOpen(true);
-    statusEl.textContent = "El dictado no está disponible en este navegador";
+function refreshVoices() {
+  if (!("speechSynthesis" in window)) return;
+  voiceInventory = speechSynthesis.getVoices().map(serializeVoice);
+  const liveVoices = speechSynthesis.getVoices();
+  const choice = chooseVoice(liveVoices);
+  selectedVoice = choice?.voice || null;
+  window.__WIA_VOICE_DEBUG__ = {
+    selectorVersion: VOICE_SELECTOR_VERSION,
+    inventory: voiceInventory,
+    selected: selectedVoice ? serializeVoice(selectedVoice) : null,
+    selectedScore: choice?.score ?? null,
+    reason: choice ? "highest deterministic score: language, quality terms, explicit allowlist, quality denylist, service type" : "no Spanish voice exposed by browser",
+    preset: ACTIVE_PRESET,
+    platform: navigator.platform,
+    userAgent: navigator.userAgent,
+  };
+}
+refreshVoices();
+if ("speechSynthesis" in window) speechSynthesis.addEventListener("voiceschanged", refreshVoices);
+
+function normalizeSpeechText(text) {
+  return String(text)
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/[*_~>|]/g, "")
+    .replace(/@cf\/[\w./-]+/g, "")
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.!?;:])/g, "$1")
+    .trim();
+}
+
+function splitSpeech(text) {
+  const normalized = normalizeSpeechText(text);
+  if (!normalized) return [];
+  return normalized.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((part) => part.trim()).filter(Boolean) || [normalized];
+}
+
+function stopSpeech() {
+  speechGeneration += 1;
+  speaking = false;
+  face.classList.remove("speaking");
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+}
+
+async function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+  stopSpeech();
+  refreshVoices();
+  const chunks = splitSpeech(text);
+  if (!chunks.length) return;
+  const generation = ++speechGeneration;
+  speaking = true;
+  face.classList.add("speaking");
+
+  for (const chunk of chunks) {
+    if (generation !== speechGeneration) break;
+    await new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(chunk);
+      if (selectedVoice) utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice?.lang || "es-419";
+      utterance.rate = ACTIVE_PRESET.rate;
+      utterance.pitch = ACTIVE_PRESET.pitch;
+      utterance.volume = ACTIVE_PRESET.volume;
+      utterance.onend = resolve;
+      utterance.onerror = resolve;
+      speechSynthesis.speak(utterance);
+    });
+    if (generation === speechGeneration) await new Promise((resolve) => setTimeout(resolve, 105));
+  }
+  if (generation === speechGeneration) {
+    speaking = false;
+    face.classList.remove("speaking");
+  }
+}
+
+async function send(text) {
+  const message = text.trim();
+  if (!message) return;
+  stopSpeech();
+  setChatOpen(true);
+  const previousHistory = history.slice();
+  addMessage("user", message);
+  input.value = "";
+  autoGrowInput();
+  submitButton.disabled = true;
+  statusEl.textContent = "Pensando…";
+  face.classList.add("thinking");
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json; charset=utf-8", "x-wia-client": clientId() },
+      body: JSON.stringify({ message, history: previousHistory.slice(-8) }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok || typeof data.reply !== "string" || !data.reply.trim()) {
+      throw new Error(data.error || `HTTP_${response.status}`);
+    }
+    addMessage("assistant", data.reply.trim());
+    statusEl.textContent = data.model || "";
+    await speak(data.reply);
+  } catch (error) {
+    statusEl.textContent = `Error: ${error.message}`;
+  } finally {
+    face.classList.remove("thinking");
+    submitButton.disabled = false;
+    scrollToLastMessage();
+  }
+}
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  void send(input.value);
+});
+
+function recognitionCtor() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function beginListening() {
+  stopSpeech();
+  const Recognition = recognitionCtor();
+  if (!Recognition) {
+    setChatOpen(true);
+    statusEl.textContent = "El navegador no habilitó dictado por voz.";
     return;
   }
-  try {
-    recognition.start();
-  } catch {
+  recognition = new Recognition();
+  recognition.lang = "es-AR";
+  recognition.interimResults = false;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = () => {
+    face.classList.add("listening");
+    statusEl.textContent = "Te escucho…";
+  };
+  recognition.onresult = (event) => {
+    const transcript = event.results?.[0]?.[0]?.transcript?.trim() || "";
+    if (transcript) void send(transcript);
+  };
+  recognition.onerror = (event) => {
+    if (event.error !== "aborted") statusEl.textContent = `Micrófono: ${event.error}`;
+  };
+  recognition.onend = () => {
+    face.classList.remove("listening");
     recognition = null;
-    setFaceState("listening", false);
-  }
+  };
+  recognition.start();
 }
 
-function finishPointerInteraction(cancelled = false) {
-  clearTimeout(holdTimer);
-  holdTimer = 0;
-
-  if (longPressStarted) {
-    if (recognition) {
-      try {
-        cancelled ? recognition.abort() : recognition.stop();
-      } catch {}
-    }
-  } else if (!cancelled) {
-    if (face.classList.contains("speaking")) stopSpeaking();
-    else toggleChat();
+function finishListening() {
+  if (recognition) {
+    try { recognition.stop(); } catch {}
   }
-
-  longPressStarted = false;
-  pointerId = null;
 }
 
 face.addEventListener("pointerdown", (event) => {
-  if (pointerId !== null) return;
-  pointerId = event.pointerId;
-  longPressStarted = false;
+  if (speaking) {
+    stopSpeech();
+    event.preventDefault();
+    return;
+  }
+  pressActive = true;
+  longPressTriggered = false;
   face.setPointerCapture?.(event.pointerId);
-  holdTimer = window.setTimeout(beginHoldToTalk, HOLD_DELAY_MS);
+  clearTimeout(pressTimer);
+  pressTimer = window.setTimeout(() => {
+    if (!pressActive) return;
+    longPressTriggered = true;
+    beginListening();
+  }, 380);
 });
 
 face.addEventListener("pointerup", (event) => {
-  if (event.pointerId !== pointerId) return;
-  finishPointerInteraction(false);
+  const wasLong = longPressTriggered;
+  pressActive = false;
+  clearTimeout(pressTimer);
+  finishListening();
+  if (!wasLong && !speaking) toggleChat();
+  face.releasePointerCapture?.(event.pointerId);
 });
 
-face.addEventListener("pointercancel", (event) => {
-  if (event.pointerId !== pointerId) return;
-  finishPointerInteraction(true);
+face.addEventListener("pointercancel", () => {
+  pressActive = false;
+  clearTimeout(pressTimer);
+  finishListening();
 });
-
-face.addEventListener("lostpointercapture", () => {
-  if (pointerId !== null) finishPointerInteraction(true);
-});
-
 face.addEventListener("keydown", (event) => {
   if (event.key === "Enter" || event.key === " ") {
     event.preventDefault();
-    toggleChat();
+    if (speaking) stopSpeech(); else toggleChat();
   }
 });
 
-navigator.serviceWorker?.register("/sw.js").catch(() => {});
+function scheduleBlink() {
+  const delay = 4000 + Math.random() * 5000;
+  setTimeout(() => {
+    if (!document.hidden && !face.classList.contains("listening")) {
+      face.classList.add("blinking");
+      setTimeout(() => face.classList.remove("blinking"), 180);
+    }
+    scheduleBlink();
+  }, delay);
+}
+scheduleBlink();
+
+async function clearLegacyCaches() {
+  if (!("caches" in window)) return;
+  const names = await caches.keys();
+  await Promise.all(names.filter((name) => name.startsWith(CACHE_PREFIX) && name !== "wia-v1-1-shell-20260731").map((name) => caches.delete(name)));
+}
+void clearLegacyCaches();
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => {}));
+}
+
+window.__WIA_INTERACTION_DEBUG__ = {
+  version: "WIA_INTERACTION_V1_1",
+  open: () => setChatOpen(true),
+  close: () => setChatOpen(false),
+  stopSpeech,
+  getState: () => ({ open: app.classList.contains("open"), speaking, listening: Boolean(recognition), historyLength: history.length }),
+};

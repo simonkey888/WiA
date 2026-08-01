@@ -1,0 +1,11 @@
+{
+  "project": "WiA",
+  "workset": "WIA-FACE-VOICE-UX-V1_1",
+  "marker": "WIA_FACE_VOICE_UX_V1_1",
+  "branch": "feat/wia-face-voice-ux-v1-1",
+  "worker": "wia",
+  "canonical_url": "https://wia.simondalmasso44.workers.dev/",
+  "status": "IMPLEMENTATION_READY_FOR_TECHNICAL_GATES",
+  "physical_face_validation": "PENDING_SIMON",
+  "physical_voice_validation": "PENDING_SIMON"
+}

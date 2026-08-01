@@ -1,12 +1,12 @@
-const CACHE_NAME = "wia-face-canonical-v1";
+const CACHE_NAME = "wia-v1-1-shell-20260731";
 const SHELL = [
   "/styles.css",
   "/app.js",
+  "/voice-selector.js",
   "/manifest.webmanifest",
-  "/assets/wia-face-base.v1.svg",
-  "/assets/wia-face-layer-2.v1.svg",
-  "/assets/wia-face-layer-3-4.v1.svg",
-  "/assets/wia-face-manifest.json",
+  "/assets/wia-face-v1-1.webp",
+  "/assets/wia-face-v1-1.png",
+  "/assets/wia-face-v1-1-manifest.json"
 ];
 
 self.addEventListener("install", (event) => {
@@ -15,25 +15,26 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("wia-") && key !== CACHE_NAME).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(names.filter((name) => name.startsWith("wia-") && name !== CACHE_NAME).map((name) => caches.delete(name)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== "GET" || url.origin !== self.location.origin || url.pathname === "/" || url.pathname.startsWith("/api/")) {
-    return;
-  }
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-      if (response.ok) {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-      }
-      return response;
-    }))
-  );
+  const request = event.request;
+  if (request.method !== "GET") return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || url.pathname === "/" || url.pathname.startsWith("/api/")) return;
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+    }
+    return response;
+  })());
 });

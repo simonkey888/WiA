@@ -1,0 +1,27 @@
+{
+  "asset_version": "WIA_FACE_V1_1",
+  "source": "controlled manual low-poly portrait derived from Simon canonical reference",
+  "identity_policy": "same female bob identity; raster runtime; no automatic triangulation",
+  "source_archive_sha256": "f29e55ad5d0c0af25b5c869969aadfdbad6c3b27f315e3a64a132a1638058ad5",
+  "principal": "/assets/wia-face-v1-1.webp",
+  "fallback": "/assets/wia-face-v1-1.png",
+  "width": 760,
+  "height": 849,
+  "alpha": true,
+  "source_svg_active_in_runtime": false,
+  "old_triangulated_assets_active": false,
+  "assets": [
+    {
+      "path": "/assets/wia-face-v1-1.webp",
+      "content_type": "image/webp",
+      "bytes": 53084,
+      "sha256": "585c92d4e06a68bb3c44897dc567a9f2aa48fdf814a6abfae5143e73570b715a"
+    },
+    {
+      "path": "/assets/wia-face-v1-1.png",
+      "content_type": "image/png",
+      "bytes": 117631,
+      "sha256": "8bc1ea43a079f76b71bd8a7c6fc98ee19b6ca7793d82e6e9ada8c87cdac03cc2"
+    }
+  ]
+}
