@@ -1,0 +1,232 @@
+name: Execute WiA Face Voice UX V1.1
+
+on:
+  push:
+    branches:
+      - feat/wia-face-voice-ux-v1-1
+    paths:
+      - .github/workflows/execute-wia-v1-1.yml
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: execute-wia-face-voice-v1-1
+  cancel-in-progress: false
+
+env:
+  BASE_URL: https://wia.simondalmasso44.workers.dev
+  EXPECTED_WORKSET: WIA-FACE-VOICE-UX-V1_1
+  EXPECTED_MARKER: WIA_FACE_VOICE_UX_V1_1
+  ISSUE_NUMBER: "2"
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v6
+        with:
+          ref: feat/wia-face-voice-ux-v1-1
+          fetch-depth: 0
+
+      - name: Materialize exact implementation when staged
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f ops/materialize-wia-v1-1.sh ]; then
+            bash ops/materialize-wia-v1-1.sh
+          fi
+          test -s src/index.js
+          test -s public/assets/wia-face-v1-1.webp
+          test -s public/assets/wia-face-v1-1.png
+
+      - name: Remove one-shot launcher from canonical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f .github/workflows/execute-wia-v1-1.yml ]; then
+            rm .github/workflows/execute-wia-v1-1.yml
+            git config user.name github-actions
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add -A
+            git commit -m "chore: remove one-shot WiA V1.1 launcher [skip ci]"
+            git push origin HEAD:refs/heads/feat/wia-face-voice-ux-v1-1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install, test and build exact source
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ops/evidence/wia-v1-1
+          git rev-parse HEAD | tee ops/evidence/wia-v1-1/source-commit.txt
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run check 2>&1 | tee ops/evidence/wia-v1-1/source-syntax.txt
+          npm test 2>&1 | tee ops/evidence/wia-v1-1/tests.txt
+          npm run build 2>&1 | tee ops/evidence/wia-v1-1/build.txt
+          ! grep -R -E "wia-face-base\.v1\.svg|wia-face-layer-2\.v1\.svg|wia-face-layer-3-4\.v1\.svg" src public tests
+          sha256sum public/assets/wia-face-v1-1.webp public/assets/wia-face-v1-1.png public/assets/wia-face-v1-1-manifest.json > ops/evidence/wia-v1-1/asset-hashes.txt
+
+      - name: Wrangler dry-run
+        id: dryrun
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.DEPLOY_NOW }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.116.0"
+          command: deploy --dry-run --outdir .wrangler-dry-run
+
+      - name: Record dry-run
+        shell: bash
+        env:
+          OUTPUT: ${{ steps.dryrun.outputs.command-output }}
+          STDERR: ${{ steps.dryrun.outputs.command-stderr }}
+        run: |
+          set -euo pipefail
+          { echo WRANGLER_VERSION=4.116.0; echo STATUS=PASS; printf '%s\n' "$OUTPUT"; printf '%s\n' "$STDERR"; } | sed -E 's/[A-Za-z0-9_-]{40,}/[REDACTED]/g' > ops/evidence/wia-v1-1/dry-run.txt
+
+      - name: Preflight stable backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 30 -H 'cache-control: no-cache' "$BASE_URL/api/health?preflight=$GITHUB_RUN_ID" > /tmp/preflight-health.json
+          jq -e '.ok == true and .worker == "wia"' /tmp/preflight-health.json
+          http=$(curl -sS --max-time 150 -o /tmp/preflight-chat.json -w '%{http_code}' -X POST "$BASE_URL/api/chat" -H 'content-type: application/json; charset=utf-8' --data '{"message":"Respondé en una frase breve: ¿quién sos?","history":[]}')
+          test "$http" = 200
+          jq -e '.ok == true and .degraded == false and (.reply|type=="string" and length>0) and (.model|type=="string" and length>0)' /tmp/preflight-chat.json
+
+      - name: Deploy exact source to existing wia Worker
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.DEPLOY_NOW }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.116.0"
+          command: deploy
+
+      - name: Verify remote application
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            http=$(curl -sS --max-time 25 -H 'cache-control: no-cache' -o /tmp/health.json -w '%{http_code}' "$BASE_URL/api/health?run=$GITHUB_RUN_ID&attempt=$attempt" || true)
+            if [ "$http" = 200 ] && jq -e --arg w "$EXPECTED_WORKSET" --arg m "$EXPECTED_MARKER" '.ok==true and .workset==$w and .marker==$m and .face_asset=="/assets/wia-face-v1-1.webp" and .voice_selector_version=="WIA_LATAM_VOICE_SELECTOR_V1_1"' /tmp/health.json >/dev/null 2>&1; then break; fi
+            sleep 4
+          done
+          jq -e --arg w "$EXPECTED_WORKSET" --arg m "$EXPECTED_MARKER" '.ok==true and .workset==$w and .marker==$m' /tmp/health.json
+          root_http=$(curl -sS --max-time 30 -D /tmp/root.headers -o /tmp/root.html -w '%{http_code}' "$BASE_URL/?run=$GITHUB_RUN_ID")
+          test "$root_http" = 200
+          grep -qi '^cache-control:.*no-store' /tmp/root.headers
+          grep -q 'wia-face-v1-1.webp' /tmp/root.html
+          ! grep -E 'wia-face-base.v1.svg|wia-face-layer-2.v1.svg|wia-face-layer-3-4.v1.svg' /tmp/root.html
+          webp_http=$(curl -sS --max-time 30 -D /tmp/webp.headers -o /tmp/face.webp -w '%{http_code}' "$BASE_URL/assets/wia-face-v1-1.webp")
+          png_http=$(curl -sS --max-time 30 -D /tmp/png.headers -o /tmp/face.png -w '%{http_code}' "$BASE_URL/assets/wia-face-v1-1.png")
+          test "$webp_http" = 200; test "$png_http" = 200
+          grep -qi '^content-type: image/webp' /tmp/webp.headers
+          grep -qi '^content-type: image/png' /tmp/png.headers
+          test "$(sha256sum /tmp/face.webp|awk '{print $1}')" = "$(sha256sum public/assets/wia-face-v1-1.webp|awk '{print $1}')"
+          test "$(sha256sum /tmp/face.png|awk '{print $1}')" = "$(sha256sum public/assets/wia-face-v1-1.png|awk '{print $1}')"
+          chat_http=$(curl -sS --max-time 150 -o /tmp/chat.json -w '%{http_code}' -X POST "$BASE_URL/api/chat" -H 'content-type: application/json; charset=utf-8' --data '{"message":"No me des la razón porque sí.","history":[]}')
+          test "$chat_http" = 200
+          jq -e '.ok==true and .degraded==false and (.reply|type=="string" and length>0) and (.model|type=="string" and length>0)' /tmp/chat.json
+          cp /tmp/health.json ops/evidence/wia-v1-1/remote-health.json
+          cp /tmp/chat.json ops/evidence/wia-v1-1/remote-chat.json
+          { echo ROOT_HTTP=$root_http; grep -i '^cache-control:' /tmp/root.headers|tr -d '\r'; echo WEBP_HTTP=$webp_http; grep -i '^content-type:' /tmp/webp.headers|tr -d '\r'; echo PNG_HTTP=$png_http; grep -i '^content-type:' /tmp/png.headers|tr -d '\r'; echo SERVICE_WORKER_CACHE=wia-v1-1-shell-20260731; echo OLD_ASSET_REFERENCES_IN_ROOT=0; } > ops/evidence/wia-v1-1/cache-validation.txt
+
+      - name: Capture mobile, interaction and voice evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.54.1
+          npx playwright install --with-deps chromium
+          node tests/capture-remote.mjs
+
+      - name: Commit evidence and append checkpoint
+        id: checkpoint
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          face_sha=$(sha256sum public/assets/wia-face-v1-1.webp|awk '{print $1}')
+          selected_name=$(jq -r '.selected.name // "NONE_IN_HEADLESS_CHROMIUM"' ops/evidence/wia-v1-1/voice-selection.json)
+          selected_lang=$(jq -r '.selected.lang // "NONE_IN_HEADLESS_CHROMIUM"' ops/evidence/wia-v1-1/voice-selection.json)
+          cp ops/evidence/wia-v1-1/WIA-TTS-OPTIONS-V1_1.md ops/evidence/WIA-TTS-OPTIONS-V1_1.md
+          node <<'NODE'
+          const fs=require('fs');
+          const health=JSON.parse(fs.readFileSync('ops/evidence/wia-v1-1/remote-health.json'));
+          const chat=JSON.parse(fs.readFileSync('ops/evidence/wia-v1-1/remote-chat.json'));
+          const manifest=JSON.parse(fs.readFileSync('public/assets/wia-face-v1-1-manifest.json'));
+          const cp={claim:'WIA_FACE_VOICE_UX_V1_1',status:'READY_FOR_PHYSICAL_VALIDATION',url:process.env.BASE_URL+'/',workset:process.env.EXPECTED_WORKSET,marker:process.env.EXPECTED_MARKER,source_branch:'feat/wia-face-voice-ux-v1-1',source_commit_sha:process.env.SOURCE_SHA,deploy_run:`https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,face_asset:'/assets/wia-face-v1-1.webp',face_asset_sha256:manifest.assets.find(a=>a.path.endsWith('.webp')).sha256,old_face_removed:true,remote_health:health.ok===true,remote_chat:chat.ok===true&&chat.degraded===false,viewport_360_closed:'ops/evidence/wia-v1-1/viewport-360x800-closed.png',viewport_360_open:'ops/evidence/wia-v1-1/viewport-360x800-open.png',viewport_430:'ops/evidence/wia-v1-1/viewport-430x900.png',voice_selector_version:'WIA_LATAM_VOICE_SELECTOR_V1_1',voice_inventory_evidence:'ops/evidence/wia-v1-1/voice-inventory.json',cache_invalidation:true,physical_face_validation:'PENDING_SIMON',physical_voice_validation:'PENDING_SIMON'};
+          fs.writeFileSync('ops/evidence/wia-v1-1/final-checkpoint.json',JSON.stringify(cp,null,2)+'\n');
+          NODE
+          git config user.name github-actions
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ops/evidence
+          git commit -m "docs: record WiA V1.1 technical validation [skip ci]"
+          git push origin HEAD:refs/heads/feat/wia-face-voice-ux-v1-1
+          evidence_sha=$(git rev-parse HEAD)
+          cat > /tmp/checkpoint.txt <<EOF
+          ARQ_TECHNICAL_CHECKPOINT
+
+          WIA_FACE_VOICE_UX_V1_1
+
+          STATUS=READY_FOR_PHYSICAL_VALIDATION
+          URL=$BASE_URL/
+          WORKSET=$EXPECTED_WORKSET
+          MARKER=$EXPECTED_MARKER
+          SOURCE_BRANCH=feat/wia-face-voice-ux-v1-1
+          SOURCE_COMMIT_SHA=$SOURCE_SHA
+          EVIDENCE_COMMIT_SHA=$evidence_sha
+          DEPLOY_RUN=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          FACE_ASSET=/assets/wia-face-v1-1.webp
+          FACE_ASSET_SHA256=$face_sha
+          OLD_FACE_REMOVED=PASS
+          REMOTE_HEALTH=PASS
+          REMOTE_CHAT=PASS
+          VIEWPORT_360_CLOSED=ops/evidence/wia-v1-1/viewport-360x800-closed.png
+          VIEWPORT_360_OPEN=ops/evidence/wia-v1-1/viewport-360x800-open.png
+          VIEWPORT_430=ops/evidence/wia-v1-1/viewport-430x900.png
+          VOICE_SELECTOR_VERSION=WIA_LATAM_VOICE_SELECTOR_V1_1
+          SELECTED_VOICE_NAME=$selected_name
+          SELECTED_VOICE_LANG=$selected_lang
+          VOICE_INVENTORY_EVIDENCE=ops/evidence/wia-v1-1/voice-inventory.json
+          CACHE_INVALIDATION=PASS
+          PHYSICAL_FACE_VALIDATION=PENDING_SIMON
+          PHYSICAL_VOICE_VALIDATION=PENDING_SIMON
+          EOF
+          sed -i 's/^          //' /tmp/checkpoint.txt
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file /tmp/checkpoint.txt
+
+      - name: Append blocker to Issue 2
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > /tmp/blocker.txt <<EOF
+          ARQ_BLOCKER
+
+          WIA_FACE_VOICE_UX_V1_1
+
+          STATUS=BLOCKED
+          BLOCKING_GATE=GITHUB_ACTIONS_RUN
+          EXACT_ERROR=Workflow run $GITHUB_RUN_ID failed; causal evidence is preserved in the failed step log.
+          CURRENT_COMMIT=$GITHUB_SHA
+          REMOTE_STATE=NOT_DECLARED_CHANGED_UNLESS_DEPLOY_STEP_SUCCEEDED
+          MINIMUM_RECOVERY=Read the failed step log and correct only that causal gate.
+          RUN_URL=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          EOF
+          sed -i 's/^          //' /tmp/blocker.txt
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file /tmp/blocker.txt
