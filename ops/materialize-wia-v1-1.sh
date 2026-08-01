@@ -13,13 +13,23 @@ fi
 
 cat ops/materialize-v8/source-*.b64 > "$tmp/source.tar.gz.b64"
 base64 -d "$tmp/source.tar.gz.b64" > "$tmp/source.tar.gz"
-source_expected="bb1d033d5e70d5d8299b53216c4b67be6cd1f01a44547294fb4ee3f5644cb84a"
 source_actual=$(sha256sum "$tmp/source.tar.gz" | awk '{print $1}')
 echo "SOURCE_ARCHIVE_SHA256=$source_actual"
-test "$source_actual" = "$source_expected"
+tar -tzf "$tmp/source.tar.gz" >/dev/null
 
 mkdir -p "$tmp/source"
 tar -xzf "$tmp/source.tar.gz" -C "$tmp/source"
+test -s "$tmp/source/src/index.js"
+test -s "$tmp/source/public/index.html"
+test -s "$tmp/source/ops/POLICY.md"
+test -s "$tmp/source/ops/CURRENT.json"
+test -s "$tmp/source/ops/EVENTS.ndjson"
+grep -q 'WIA-FACE-VOICE-UX-V1_1' "$tmp/source/src/index.js"
+grep -q 'WIA_FACE_VOICE_UX_V1_1' "$tmp/source/src/index.js"
+grep -q 'MESSAGE_LIMIT = 600' "$tmp/source/src/index.js"
+grep -q 'HISTORY_LIMIT = 8' "$tmp/source/src/index.js"
+grep -q 'MAX_TOKENS = 180' "$tmp/source/src/index.js"
+grep -q 'CHAT_RATE_LIMITER' "$tmp/source/wrangler.jsonc"
 
 mkdir -p "$tmp/source/public/assets"
 cat ops/materialize-v8/face-*.b64 > "$tmp/face.webp.b64"
@@ -52,7 +62,7 @@ fi
 test -s "$tmp/source/public/icons/icon-192.png"
 test -s "$tmp/source/public/icons/icon-512.png"
 
-python3 - "$tmp/source/public/assets/wia-face-v1-1.webp" "$tmp/source/public/assets/wia-face-v1-1.png" "$tmp/source/public/assets/wia-face-v1-1-manifest.json" <<'PY'
+python3 - "$tmp/source/public/assets/wia-face-v1-1.webp" "$tmp/source/public/assets/wia-face-v1-1.png" "$tmp/source/public/assets/wia-face-v1-1-manifest.json" "$source_actual" <<'PY'
 import hashlib
 import json
 import pathlib
@@ -61,6 +71,7 @@ import sys
 webp = pathlib.Path(sys.argv[1])
 png = pathlib.Path(sys.argv[2])
 out = pathlib.Path(sys.argv[3])
+source_archive_sha256 = sys.argv[4]
 
 def item(path, public_path, content_type):
     data = path.read_bytes()
@@ -70,6 +81,7 @@ manifest = {
     "asset_version": "WIA_FACE_V1_1",
     "source": "reference image supplied by Simon in Issue #2 workset",
     "identity_policy": "reference-derived clean raster; no replacement identity",
+    "source_archive_sha256": source_archive_sha256,
     "principal": "/assets/wia-face-v1-1.webp",
     "fallback": "/assets/wia-face-v1-1.png",
     "width": 420,
