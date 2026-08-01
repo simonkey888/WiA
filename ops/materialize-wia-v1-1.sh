@@ -15,6 +15,7 @@ cat ops/materialize-v8/source-*.b64 > "$tmp/source.tar.gz.b64"
 base64 -d "$tmp/source.tar.gz.b64" > "$tmp/source.tar.gz"
 source_expected="bb1d033d5e70d5d8299b53216c4b67be6cd1f01a44547294fb4ee3f5644cb84a"
 source_actual=$(sha256sum "$tmp/source.tar.gz" | awk '{print $1}')
+echo "SOURCE_ARCHIVE_SHA256=$source_actual"
 test "$source_actual" = "$source_expected"
 
 mkdir -p "$tmp/source"
@@ -25,6 +26,7 @@ cat ops/materialize-v8/face-*.b64 > "$tmp/face.webp.b64"
 base64 -d "$tmp/face.webp.b64" > "$tmp/source/public/assets/wia-face-v1-1.webp"
 face_expected="9c9d36f7e8b24eaa5e80628b1eb527931d8ff5d4f01281f0102a84a994241649"
 face_actual=$(sha256sum "$tmp/source/public/assets/wia-face-v1-1.webp" | awk '{print $1}')
+echo "FACE_WEBP_SHA256=$face_actual"
 test "$face_actual" = "$face_expected"
 
 sudo apt-get update -qq
@@ -62,12 +64,7 @@ out = pathlib.Path(sys.argv[3])
 
 def item(path, public_path, content_type):
     data = path.read_bytes()
-    return {
-        "path": public_path,
-        "content_type": content_type,
-        "bytes": len(data),
-        "sha256": hashlib.sha256(data).hexdigest(),
-    }
+    return {"path": public_path, "content_type": content_type, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 manifest = {
     "asset_version": "WIA_FACE_V1_1",
@@ -78,10 +75,7 @@ manifest = {
     "width": 420,
     "height": 469,
     "alpha": True,
-    "assets": [
-        item(webp, "/assets/wia-face-v1-1.webp", "image/webp"),
-        item(png, "/assets/wia-face-v1-1.png", "image/png"),
-    ],
+    "assets": [item(webp, "/assets/wia-face-v1-1.webp", "image/webp"), item(png, "/assets/wia-face-v1-1.png", "image/png")],
     "old_triangulated_assets_active": False,
 }
 out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
