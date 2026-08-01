@@ -51,4 +51,4 @@ jobs:
           EOF
           gh issue comment 2 --repo "$GITHUB_REPOSITORY" --body-file /tmp/blocker.txt
 
-# retry 3: content-contract validation of staged source
+# retry 4: identify corrupted staged chunk
