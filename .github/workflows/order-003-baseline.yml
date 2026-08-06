@@ -35,147 +35,25 @@ jobs:
           ref: feat/wia-complete-end-to-end-v1
           fetch-depth: 0
 
-      - name: Capture authenticated baseline
-        id: baseline
+      - name: Capture public and authenticated state
+        shell: bash
+        run: bash ops/order-003-baseline.sh
+
+      - name: Preserve evidence and publish material checkpoint
         shell: bash
         run: |
           set -Eeuo pipefail
           set +x
-          E="ops/evidence/order-003/baseline"
-          R="$RUNNER_TEMP/order003"
-          mkdir -p "$E" "$R"
-
-          get_public() {
-            local path="$1" name="$2" status ctype bytes sha
-            status=$(curl -sS --max-time 60 -D "$R/$name.headers" -o "$R/$name.body" -w '%{http_code}' "$BASE_URL$path")
-            ctype=$(awk 'BEGIN{IGNORECASE=1} /^content-type:/{sub(/^[^:]+:[[:space:]]*/,"");print;exit}' "$R/$name.headers"|tr -d '\r')
-            bytes=$(wc -c < "$R/$name.body"|tr -d ' ')
-            sha=$(sha256sum "$R/$name.body"|awk '{print $1}')
-            awk 'BEGIN{IGNORECASE=1}!/^(authorization|cookie|set-cookie):/' "$R/$name.headers"|tr -d '\r' > "$E/$name.headers.txt"
-            jq -n --arg path "$path" --argjson status "$status" --arg content_type "$ctype" --argjson bytes "$bytes" --arg sha256 "$sha" '{path:$path,status:$status,content_type:$content_type,bytes:$bytes,sha256:$sha256}' > "$E/$name.meta.json"
-          }
-
-          post_chat() {
-            local name="$1" client="$2" payload="$3" status sha
-            status=$(curl -sS --max-time 150 -D "$R/$name.headers" -o "$R/$name.body" -w '%{http_code}' -X POST "$BASE_URL/api/chat" -H 'content-type: application/json; charset=utf-8' -H "x-wia-client: $client" --data "$payload")
-            sha=$(sha256sum "$R/$name.body"|awk '{print $1}')
-            jq -e . "$R/$name.body" > "$E/$name.json"
-            jq -n --argjson status "$status" --arg sha256 "$sha" '{status:$status,sha256:$sha256}' > "$E/$name.meta.json"
-          }
-
-          get_public / root
-          get_public /api/health health
-          get_public /manifest.webmanifest manifest
-          get_public /sw.js service-worker
-          get_public /app.js app-js
-          get_public /styles.css styles-css
-          get_public /voice-selector.js voice-selector-js
-          get_public /assets/wia-face-v1-1.webp face-webp
-          get_public /assets/wia-face-v1-1.png face-png
-          cp "$R/root.body" "$E/root.html"
-          cp "$R/health.body" "$E/health.json"
-          cp "$R/manifest.body" "$E/manifest.webmanifest"
-          cp "$R/service-worker.body" "$E/sw.js"
-
-          post_chat chat-identity order003-baseline-a '{"message":"Respondé en una frase breve: ¿quién sos?","history":[]}'
-          post_chat chat-criterion order003-baseline-b '{"message":"No me des la razón porque sí.","history":[]}'
-
-          jq -e '.status==200' "$E/root.meta.json"
-          jq -e '.status==200' "$E/health.meta.json"
-          jq -e '.ok==true and .worker=="wia" and (.workset|length>0) and (.marker|length>0)' "$E/health.json"
-          test "$(jq -r .status "$E/chat-identity.meta.json")" = 200
-          test "$(jq -r .status "$E/chat-criterion.meta.json")" = 200
-          jq -e '.ok==true and .degraded==false and (.reply|type=="string" and length>=10) and (.model|type=="string" and length>0)' "$E/chat-identity.json"
-          jq -e '.ok==true and .degraded==false and (.reply|type=="string" and length>=10) and (.model|type=="string" and length>0)' "$E/chat-criterion.json"
-
-          compare() {
-            local remote="$1" local_file="$2" rs ls match=false
-            rs=$(sha256sum "$R/$remote.body"|awk '{print $1}')
-            ls=$(sha256sum "$local_file"|awk '{print $1}')
-            [ "$rs" = "$ls" ] && match=true
-            jq -n --arg remote "$remote" --arg local "$local_file" --arg remote_sha256 "$rs" --arg local_sha256 "$ls" --argjson match "$match" '{remote:$remote,local:$local,remote_sha256:$remote_sha256,local_sha256:$local_sha256,match:$match}'
-          }
-          {
-            compare root public/index.html
-            compare manifest public/manifest.webmanifest
-            compare service-worker public/sw.js
-            compare app-js public/app.js
-            compare styles-css public/styles.css
-            compare voice-selector-js public/voice-selector.js
-            compare face-webp public/assets/wia-face-v1-1.webp
-            compare face-png public/assets/wia-face-v1-1.png
-          } | jq -s . > "$E/public-source-match.json"
-
-          test -n "${CF_API_TOKEN:-}"
-          test -n "${CF_ACCOUNT_ID:-}"
-          API="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/scripts/$WORKER_NAME"
-          cf_read() {
-            local suffix="$1" out="$2" status
-            status=$(curl -sS --max-time 90 -H "Authorization: Bearer $CF_API_TOKEN" -H 'accept: application/json' -o "$R/$out.raw.json" -w '%{http_code}' "$API$suffix")
-            jq -n --arg endpoint "$suffix" --argjson status "$status" '{endpoint:$endpoint,http_status:$status}' > "$E/$out.meta.json"
-            test "$status" = 200
-            jq -e '.success==true' "$R/$out.raw.json" >/dev/null
-          }
-          cf_read /deployments cf-deployments
-          cf_read /versions cf-versions
-
-          DEPLOYMENT_ID=$(jq -r '.result[0].id // empty' "$R/cf-deployments.raw.json")
-          DEPLOYMENT_CREATED_AT=$(jq -r '.result[0].created_on // empty' "$R/cf-deployments.raw.json")
-          VERSION_ID=$(jq -r '[.result[0].versions[]? | select((.percentage // 0)==100) | (.version_id // .id)][0] // empty' "$R/cf-deployments.raw.json")
-          test -n "$DEPLOYMENT_ID"
-          test -n "$DEPLOYMENT_CREATED_AT"
-          test -n "$VERSION_ID"
-          cf_read "/deployments/$DEPLOYMENT_ID" cf-deployment-detail
-          cf_read "/versions/$VERSION_ID" cf-version-detail
-
-          python3 - "$R" "$E" <<'PY'
-          import json,pathlib,re,sys
-          raw=pathlib.Path(sys.argv[1]); out=pathlib.Path(sys.argv[2])
-          def load(name): return json.loads((raw/name).read_text())
-          secret=re.compile(r'(token|secret|password|credential|authorization|api.?key|private.?key|email)',re.I)
-          def clean(x):
-              if isinstance(x,dict): return {k:('[REDACTED]' if secret.search(k) else clean(v)) for k,v in x.items()}
-              if isinstance(x,list): return [clean(v) for v in x]
-              return x
-          safe={
-            'deployments':clean(load('cf-deployments.raw.json')),
-            'versions':clean(load('cf-versions.raw.json')),
-            'active_deployment':clean(load('cf-deployment-detail.raw.json')),
-            'active_version':clean(load('cf-version-detail.raw.json')),
-          }
-          (out/'cloudflare-snapshot.sanitized.json').write_text(json.dumps(safe,ensure_ascii=False,indent=2)+'\n')
-          PY
-
-          ACCOUNT_HASH=$(printf %s "$CF_ACCOUNT_ID"|sha256sum|awk '{print $1}')
-          unset CF_API_TOKEN CF_ACCOUNT_ID
-          SOURCE_MATCH=$(jq -r 'all(.[];.match==true)' "$E/public-source-match.json")
-          WORKSET=$(jq -r .workset "$E/health.json")
-          MARKER=$(jq -r .marker "$E/health.json")
-          MODEL=$(jq -r .model "$E/health.json")
-          CHAT1_MODEL=$(jq -r .model "$E/chat-identity.json")
-          CHAT2_MODEL=$(jq -r .model "$E/chat-criterion.json")
-          CAPTURED=$(date -u +%FT%TZ)
-          SOURCE_SHA=$(git rev-parse HEAD)
-          SOURCE_TREE=$(git rev-parse HEAD^{tree})
-          MAIN_SHA=$(git rev-parse origin/main)
-
-          jq -n \
-            --arg captured_at_utc "$CAPTURED" --arg account_id_sha256 "$ACCOUNT_HASH" \
-            --arg source_sha "$SOURCE_SHA" --arg source_tree "$SOURCE_TREE" --arg main_sha "$MAIN_SHA" \
-            --arg workset "$WORKSET" --arg marker "$MARKER" --arg model "$MODEL" \
-            --arg chat1_model "$CHAT1_MODEL" --arg chat2_model "$CHAT2_MODEL" \
-            --arg deployment_id "$DEPLOYMENT_ID" --arg version_id "$VERSION_ID" --arg deployment_created_at "$DEPLOYMENT_CREATED_AT" \
-            --argjson public_source_match "$SOURCE_MATCH" \
-            '{claim:"WIA_ORDER_003_BASELINE",captured_at_utc:$captured_at_utc,repository:"simonkey888/WiA",branch:"feat/wia-complete-end-to-end-v1",account_id_sha256:$account_id_sha256,source_sha:$source_sha,source_tree:$source_tree,main_sha:$main_sha,remote:{url:"https://wia.simondalmasso44.workers.dev/",workset:$workset,marker:$marker,model:$model,chat_models:[$chat1_model,$chat2_model],deployment_id:$deployment_id,version_id:$version_id,deployment_created_at:$deployment_created_at},validation:{root:true,health:true,chat_identity:true,chat_criterion:true,public_source_match:$public_source_match},security:{billing_api_called:false,billing_write:false,secret_values_persisted:false,token_output:false},cost:{paid_plan_enabled:false,external_paid_provider:false}}' > "$E/baseline.json"
-
+          source ops/evidence/order-003/baseline/status.env
           git config user.name github-actions
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add "$E"
+          git add ops/evidence/order-003/baseline
           git commit -m 'docs: preserve Order 003 authenticated baseline [skip ci]'
           git push origin HEAD:refs/heads/feat/wia-complete-end-to-end-v1
-          FINAL_SHA=$(git rev-parse HEAD)
+          EVIDENCE_SHA=$(git rev-parse HEAD)
 
-          cat > "$RUNNER_TEMP/comment.txt" <<EOF
+          if [ "$STATUS" = PASS ]; then
+            cat > "$RUNNER_TEMP/comment.txt" <<EOF
           ARQ_ORDER_003_BASELINE
 
           TIMESTAMP_UTC=$CAPTURED
@@ -183,7 +61,7 @@ jobs:
           PHASE=PHASE_1_REMOTE_GITHUB_CLOUDFLARE_RECONSTRUCTION
           SOURCE_BRANCH=$TARGET_BRANCH
           BASELINE_SOURCE_SHA=$BASELINE_SHA
-          EVIDENCE_COMMIT_SHA=$FINAL_SHA
+          EVIDENCE_COMMIT_SHA=$EVIDENCE_SHA
           MAIN_SHA=$MAIN_SHA
           REMOTE_WORKSET=$WORKSET
           REMOTE_MARKER=$MARKER
@@ -205,29 +83,31 @@ jobs:
           EVIDENCE_ROOT=ops/evidence/order-003/baseline/
           NEXT_PHASE=PHASE_2_CANONICAL_BASELINE_AND_CLEANUP_PLAN
           EOF
-          sed -i 's/^          //' "$RUNNER_TEMP/comment.txt"
-          gh issue comment 3 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.txt"
-
-      - name: Append precise blocker
-        if: failure()
-        shell: bash
-        run: |
-          set +x
-          cat > "$RUNNER_TEMP/blocker.txt" <<EOF
+          else
+            CHAT1_HTTP=$(jq -r '.status // 0' ops/evidence/order-003/baseline/chat-identity.meta.json 2>/dev/null || echo 0)
+            CHAT2_HTTP=$(jq -r '.status // 0' ops/evidence/order-003/baseline/chat-criterion.meta.json 2>/dev/null || echo 0)
+            cat > "$RUNNER_TEMP/comment.txt" <<EOF
           WIA_ORDER_003_CHECKPOINT
 
           STATUS=BLOCKED
           BLOCKING_PHASE=PHASE_1_REMOTE_GITHUB_CLOUDFLARE_RECONSTRUCTION
-          BLOCKING_GATE=GATE_AUTHORITY_RECONSTRUCTED
-          EXACT_ERROR=Baseline workflow failed; causal command is preserved in run $GITHUB_RUN_ID.
+          BLOCKING_GATE=$FAILURE_STEP
+          EXACT_ERROR=$FAILURE_ERROR
           COMMAND_OR_REQUEST=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-          CURRENT_SOURCE_SHA=$GITHUB_SHA
+          CURRENT_SOURCE_SHA=$SOURCE_SHA
+          EVIDENCE_COMMIT_SHA=$EVIDENCE_SHA
+          CHAT_IDENTITY_HTTP=$CHAT1_HTTP
+          CHAT_CRITERION_HTTP=$CHAT2_HTTP
+          ACTIVE_DEPLOYMENT_ID=$DEPLOYMENT_ID
+          ACTIVE_VERSION_ID=$VERSION_ID
           REMOTE_STATE=NOT_MUTATED_BY_THIS_WORKFLOW
           COST_STATE=ZERO_COST_NO_BILLING_OPERATION
-          SECRET_STATE=NO_SECRET_VALUE_INTENTIONALLY_OUTPUT
+          SECRET_STATE=PASS_NO_SECRET_VALUE_PERSISTED
           EVIDENCE_PATH=ops/evidence/order-003/baseline/
-          WHY_CONTINUATION_IS_UNSAFE_OR_INVALID=Implementation must not proceed until fresh baseline identity is proven.
-          MINIMUM_REQUIRED_RECOVERY=Correct only the first failed command in run $GITHUB_RUN_ID and rerun the same read-only capture.
+          WHY_CONTINUATION_IS_UNSAFE_OR_INVALID=Fresh baseline did not satisfy every identity gate.
+          MINIMUM_REQUIRED_RECOVERY=Correct or revalidate only $FAILURE_STEP using the preserved evidence commit $EVIDENCE_SHA.
           EOF
-          sed -i 's/^          //' "$RUNNER_TEMP/blocker.txt"
-          gh issue comment 3 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/blocker.txt"
+          fi
+          sed -i 's/^          //' "$RUNNER_TEMP/comment.txt"
+          gh issue comment 3 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.txt"
+          test "$STATUS" = PASS
