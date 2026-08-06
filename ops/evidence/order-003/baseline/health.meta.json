@@ -1,0 +1,7 @@
+{
+  "path": "/api/health",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "bytes": 481,
+  "sha256": "899eaa253d7b7821e8211e0f8f379070a8f4c359e65b5404a857a106bcaf151a"
+}
