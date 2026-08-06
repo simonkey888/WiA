@@ -3,7 +3,9 @@ name: WiA Order 003 Baseline Reconstruction
 on:
   push:
     branches: [feat/wia-complete-end-to-end-v1]
-    paths: [.github/workflows/order-003-baseline.yml]
+    paths:
+      - .github/workflows/order-003-baseline.yml
+      - ops/order-003-baseline.sh
   workflow_dispatch:
 
 permissions:
@@ -44,7 +46,24 @@ jobs:
         run: |
           set -Eeuo pipefail
           set +x
-          source ops/evidence/order-003/baseline/status.env
+          J=ops/evidence/order-003/baseline/baseline.json
+          STATUS=$(jq -r .status "$J")
+          CAPTURED=$(jq -r .captured_at_utc "$J")
+          SOURCE_SHA=$(jq -r .source_sha "$J")
+          SOURCE_TREE=$(jq -r .source_tree "$J")
+          MAIN_SHA=$(jq -r .main_sha "$J")
+          WORKSET=$(jq -r .remote.workset "$J")
+          MARKER=$(jq -r .remote.marker "$J")
+          MODEL=$(jq -r .remote.model "$J")
+          CHAT1_MODEL=$(jq -r '.remote.chat_models[0]' "$J")
+          CHAT2_MODEL=$(jq -r '.remote.chat_models[1]' "$J")
+          DEPLOYMENT_ID=$(jq -r .remote.deployment_id "$J")
+          VERSION_ID=$(jq -r .remote.version_id "$J")
+          DEPLOYMENT_CREATED_AT=$(jq -r .remote.deployment_created_at "$J")
+          SOURCE_MATCH=$(jq -r .validation.public_source_match "$J")
+          FAILURE_STEP=$(jq -r .failure.step "$J")
+          FAILURE_ERROR=$(jq -r .failure.error "$J")
+
           git config user.name github-actions
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add ops/evidence/order-003/baseline
@@ -105,7 +124,7 @@ jobs:
           SECRET_STATE=PASS_NO_SECRET_VALUE_PERSISTED
           EVIDENCE_PATH=ops/evidence/order-003/baseline/
           WHY_CONTINUATION_IS_UNSAFE_OR_INVALID=Fresh baseline did not satisfy every identity gate.
-          MINIMUM_REQUIRED_RECOVERY=Correct or revalidate only $FAILURE_STEP using the preserved evidence commit $EVIDENCE_SHA.
+          MINIMUM_REQUIRED_RECOVERY=Correct or revalidate only $FAILURE_STEP using evidence commit $EVIDENCE_SHA.
           EOF
           fi
           sed -i 's/^          //' "$RUNNER_TEMP/comment.txt"
