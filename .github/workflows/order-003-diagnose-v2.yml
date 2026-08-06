@@ -1,0 +1,107 @@
+name: WiA Order 003 Materialization Diagnostic V2
+
+on:
+  push:
+    branches: [feat/wia-complete-end-to-end-v1]
+    paths: [.github/workflows/order-003-diagnose-v2.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/wia-complete-end-to-end-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Reproduce and report exact gate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          tmp=$(mktemp -d)
+          cleanup(){ rm -rf "$tmp"; }
+          report_failure(){
+            rc=$?
+            failed_line=$1
+            failed_command=$2
+            cat > "$RUNNER_TEMP/diag.txt" <<EOF
+          ARQ_ORDER_003_DIAGNOSTIC
+
+          STATUS=BLOCKED
+          PHASE=PHASE_2_CANONICAL_SOURCE_MATERIALIZATION
+          FAILED_LINE=$failed_line
+          FAILED_COMMAND=$failed_command
+          RUN_URL=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          CURRENT_SHA=$GITHUB_SHA
+          REMOTE_STATE=UNCHANGED
+          EOF
+            sed -i 's/^          //' "$RUNNER_TEMP/diag.txt"
+            gh issue comment 3 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/diag.txt" || true
+            cleanup
+            exit "$rc"
+          }
+          trap 'report_failure "$LINENO" "$BASH_COMMAND"' ERR
+
+          echo STEP=DECODE
+          cat ops/materialize-order003/source-*.b64 | base64 -d > "$tmp/source.tar.gz"
+          actual_sha=$(sha256sum "$tmp/source.tar.gz" | awk '{print $1}')
+          echo ARCHIVE_SHA256="$actual_sha"
+          test "$actual_sha" = "8bf186dc8eb35b08d2d85f161f129c1188328807eb8db3ee5972489527510428"
+
+          echo STEP=EXTRACT
+          mkdir -p "$tmp/source"
+          tar -xzf "$tmp/source.tar.gz" -C "$tmp/source"
+
+          echo STEP=REPAIR
+          sed -i \
+            -e 's#public/wia-face-order003\.webp#public/assets/wia-face-order003.webp#g' \
+            -e 's#public/wia-face-order003\.png#public/assets/wia-face-order003.png#g' \
+            "$tmp/source/tests/build.mjs"
+          grep -q 'public/assets/wia-face-order003.webp' "$tmp/source/tests/build.mjs"
+          grep -q 'public/assets/wia-face-order003.png' "$tmp/source/tests/build.mjs"
+
+          echo STEP=ASSETS
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq webp imagemagick
+          dwebp "$tmp/source/public/assets/wia-face-order003.webp" -o "$tmp/source/public/assets/wia-face-order003.png" >/dev/null
+          mkdir -p "$tmp/source/public/icons"
+          if command -v magick >/dev/null 2>&1; then image_tool=(magick); else image_tool=(convert); fi
+          "${image_tool[@]}" "$tmp/source/public/assets/wia-face-order003.png" -background '#0b0712' -gravity center -extent 816x816 -resize 192x192 -strip "$tmp/source/public/icons/icon-192.png"
+          "${image_tool[@]}" "$tmp/source/public/assets/wia-face-order003.png" -background '#0b0712' -gravity center -extent 816x816 -resize 512x512 -strip "$tmp/source/public/icons/icon-512.png"
+
+          cd "$tmp/source"
+          echo STEP=NPM_CI
+          npm ci --ignore-scripts --no-audit --no-fund
+          echo STEP=CHECK
+          npm run check
+          echo STEP=TEST
+          npm test
+          echo STEP=BUILD
+          npm run build
+
+          trap - ERR
+          cat > "$RUNNER_TEMP/diag.txt" <<EOF
+          ARQ_ORDER_003_DIAGNOSTIC
+
+          STATUS=PASS
+          PHASE=PHASE_2_REPRODUCTION
+          ARCHIVE_SHA256=$actual_sha
+          SOURCE_CHECK=PASS
+          TESTS=PASS
+          BUILD=PASS
+          RUN_URL=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          NEXT_ACTION=RERUN_CANONICAL_MATERIALIZER
+          EOF
+          sed -i 's/^          //' "$RUNNER_TEMP/diag.txt"
+          gh issue comment 3 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/diag.txt"
+          cleanup
