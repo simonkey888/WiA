@@ -129,9 +129,9 @@ else
   ACCOUNT_HASH=$(printf %s "$CF_ACCOUNT_ID_CLEAN" | sha256sum | awk '{print $1}')
   CF_API="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID_CLEAN/workers/scripts/$WORKER_NAME"
   if cf_read /deployments cf-deployments && cf_read /versions cf-versions; then
-    DEPLOYMENT_ID=$(jq -r '.result[0].id // empty' "$R/cf-deployments.raw.json")
-    DEPLOYMENT_CREATED_AT=$(jq -r '.result[0].created_on // empty' "$R/cf-deployments.raw.json")
-    VERSION_ID=$(jq -r '[.result[0].versions[]? | select((.percentage // 0)==100) | (.version_id // .id)][0] // empty' "$R/cf-deployments.raw.json")
+    DEPLOYMENT_ID=$(jq -r '.result.deployments[0].id // empty' "$R/cf-deployments.raw.json")
+    DEPLOYMENT_CREATED_AT=$(jq -r '.result.deployments[0].created_on // empty' "$R/cf-deployments.raw.json")
+    VERSION_ID=$(jq -r '[.result.deployments[0].versions[]? | select((.percentage // 0)==100) | .version_id][0] // empty' "$R/cf-deployments.raw.json")
     if [ -n "$DEPLOYMENT_ID" ] && [ -n "$DEPLOYMENT_CREATED_AT" ] && [ -n "$VERSION_ID" ] && cf_read "/deployments/$DEPLOYMENT_ID" cf-deployment-detail && cf_read "/versions/$VERSION_ID" cf-version-detail; then
       CF_PASS=true
       python3 - "$R" "$E" <<'PY'
