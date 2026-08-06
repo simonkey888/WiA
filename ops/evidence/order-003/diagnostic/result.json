@@ -1,0 +1,12 @@
+{
+  "claim": "WIA_ORDER_003_MATERIALIZATION_DIAGNOSTIC",
+  "status": "BLOCKED",
+  "exit_code": 1,
+  "failed_line": "13",
+  "failed_command": "test \"$actual_sha\" = \"8bf186dc8eb35b08d2d85f161f129c1188328807eb8db3ee5972489527510428\"",
+  "run_url": "https://github.com/simonkey888/WiA/actions/runs/31076548626",
+  "current_sha": "527db68dc9c8a24aa326f325ce464f835008ae4e",
+  "remote_mutated": false,
+  "billing_write": false,
+  "secret_output": false
+}
