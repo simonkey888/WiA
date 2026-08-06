@@ -52,14 +52,15 @@ jobs:
             bytes=$(wc -c < "$R/$name.body"|tr -d ' ')
             sha=$(sha256sum "$R/$name.body"|awk '{print $1}')
             awk 'BEGIN{IGNORECASE=1}!/^(authorization|cookie|set-cookie):/' "$R/$name.headers"|tr -d '\r' > "$E/$name.headers.txt"
-            jq -n --arg path "$path" --argjson status "$status" --arg content_type "$ctype" --argjson bytes "$bytes" --arg sha256 "$sha" '{path,status,content_type,bytes,sha256}' > "$E/$name.meta.json"
+            jq -n --arg path "$path" --argjson status "$status" --arg content_type "$ctype" --argjson bytes "$bytes" --arg sha256 "$sha" '{path:$path,status:$status,content_type:$content_type,bytes:$bytes,sha256:$sha256}' > "$E/$name.meta.json"
           }
 
           post_chat() {
-            local name="$1" client="$2" payload="$3" status
+            local name="$1" client="$2" payload="$3" status sha
             status=$(curl -sS --max-time 150 -D "$R/$name.headers" -o "$R/$name.body" -w '%{http_code}' -X POST "$BASE_URL/api/chat" -H 'content-type: application/json; charset=utf-8' -H "x-wia-client: $client" --data "$payload")
+            sha=$(sha256sum "$R/$name.body"|awk '{print $1}')
             jq -e . "$R/$name.body" > "$E/$name.json"
-            jq -n --argjson status "$status" --arg sha256 "$(sha256sum "$R/$name.body"|awk '{print $1}')" '{status,sha256}' > "$E/$name.meta.json"
+            jq -n --argjson status "$status" --arg sha256 "$sha" '{status:$status,sha256:$sha256}' > "$E/$name.meta.json"
           }
 
           get_public / root
@@ -92,7 +93,7 @@ jobs:
             rs=$(sha256sum "$R/$remote.body"|awk '{print $1}')
             ls=$(sha256sum "$local_file"|awk '{print $1}')
             [ "$rs" = "$ls" ] && match=true
-            jq -n --arg remote "$remote" --arg local "$local_file" --arg remote_sha256 "$rs" --arg local_sha256 "$ls" --argjson match "$match" '{remote,local,remote_sha256,local_sha256,match}'
+            jq -n --arg remote "$remote" --arg local "$local_file" --arg remote_sha256 "$rs" --arg local_sha256 "$ls" --argjson match "$match" '{remote:$remote,local:$local,remote_sha256:$remote_sha256,local_sha256:$local_sha256,match:$match}'
           }
           {
             compare root public/index.html
@@ -111,7 +112,7 @@ jobs:
           cf_read() {
             local suffix="$1" out="$2" status
             status=$(curl -sS --max-time 90 -H "Authorization: Bearer $CF_API_TOKEN" -H 'accept: application/json' -o "$R/$out.raw.json" -w '%{http_code}' "$API$suffix")
-            jq -n --arg endpoint "$suffix" --argjson status "$status" '{endpoint,http_status:$status}' > "$E/$out.meta.json"
+            jq -n --arg endpoint "$suffix" --argjson status "$status" '{endpoint:$endpoint,http_status:$status}' > "$E/$out.meta.json"
             test "$status" = 200
             jq -e '.success==true' "$R/$out.raw.json" >/dev/null
           }
@@ -131,20 +132,16 @@ jobs:
           import json,pathlib,re,sys
           raw=pathlib.Path(sys.argv[1]); out=pathlib.Path(sys.argv[2])
           def load(name): return json.loads((raw/name).read_text())
-          deployments=load('cf-deployments.raw.json')
-          versions=load('cf-versions.raw.json')
-          deployment=load('cf-deployment-detail.raw.json')
-          version=load('cf-version-detail.raw.json')
           secret=re.compile(r'(token|secret|password|credential|authorization|api.?key|private.?key|email)',re.I)
           def clean(x):
               if isinstance(x,dict): return {k:('[REDACTED]' if secret.search(k) else clean(v)) for k,v in x.items()}
               if isinstance(x,list): return [clean(v) for v in x]
               return x
           safe={
-            'deployments':clean(deployments),
-            'versions':clean(versions),
-            'active_deployment':clean(deployment),
-            'active_version':clean(version),
+            'deployments':clean(load('cf-deployments.raw.json')),
+            'versions':clean(load('cf-versions.raw.json')),
+            'active_deployment':clean(load('cf-deployment-detail.raw.json')),
+            'active_version':clean(load('cf-version-detail.raw.json')),
           }
           (out/'cloudflare-snapshot.sanitized.json').write_text(json.dumps(safe,ensure_ascii=False,indent=2)+'\n')
           PY
@@ -158,15 +155,18 @@ jobs:
           CHAT1_MODEL=$(jq -r .model "$E/chat-identity.json")
           CHAT2_MODEL=$(jq -r .model "$E/chat-criterion.json")
           CAPTURED=$(date -u +%FT%TZ)
+          SOURCE_SHA=$(git rev-parse HEAD)
+          SOURCE_TREE=$(git rev-parse HEAD^{tree})
+          MAIN_SHA=$(git rev-parse origin/main)
 
           jq -n \
             --arg captured_at_utc "$CAPTURED" --arg account_id_sha256 "$ACCOUNT_HASH" \
-            --arg source_sha "$(git rev-parse HEAD)" --arg source_tree "$(git rev-parse HEAD^{tree})" \
-            --arg main_sha "$(git rev-parse origin/main)" --arg workset "$WORKSET" --arg marker "$MARKER" \
-            --arg model "$MODEL" --arg chat1_model "$CHAT1_MODEL" --arg chat2_model "$CHAT2_MODEL" \
+            --arg source_sha "$SOURCE_SHA" --arg source_tree "$SOURCE_TREE" --arg main_sha "$MAIN_SHA" \
+            --arg workset "$WORKSET" --arg marker "$MARKER" --arg model "$MODEL" \
+            --arg chat1_model "$CHAT1_MODEL" --arg chat2_model "$CHAT2_MODEL" \
             --arg deployment_id "$DEPLOYMENT_ID" --arg version_id "$VERSION_ID" --arg deployment_created_at "$DEPLOYMENT_CREATED_AT" \
             --argjson public_source_match "$SOURCE_MATCH" \
-            '{claim:"WIA_ORDER_003_BASELINE",captured_at_utc,repository:"simonkey888/WiA",branch:"feat/wia-complete-end-to-end-v1",account_id_sha256,source_sha,source_tree,main_sha,remote:{url:"https://wia.simondalmasso44.workers.dev/",workset,marker,model,chat_models:[$chat1_model,$chat2_model],deployment_id,version_id,deployment_created_at},validation:{root:true,health:true,chat_identity:true,chat_criterion:true,public_source_match},security:{billing_api_called:false,billing_write:false,secret_values_persisted:false,token_output:false},cost:{paid_plan_enabled:false,external_paid_provider:false}}' > "$E/baseline.json"
+            '{claim:"WIA_ORDER_003_BASELINE",captured_at_utc:$captured_at_utc,repository:"simonkey888/WiA",branch:"feat/wia-complete-end-to-end-v1",account_id_sha256:$account_id_sha256,source_sha:$source_sha,source_tree:$source_tree,main_sha:$main_sha,remote:{url:"https://wia.simondalmasso44.workers.dev/",workset:$workset,marker:$marker,model:$model,chat_models:[$chat1_model,$chat2_model],deployment_id:$deployment_id,version_id:$version_id,deployment_created_at:$deployment_created_at},validation:{root:true,health:true,chat_identity:true,chat_criterion:true,public_source_match:$public_source_match},security:{billing_api_called:false,billing_write:false,secret_values_persisted:false,token_output:false},cost:{paid_plan_enabled:false,external_paid_provider:false}}' > "$E/baseline.json"
 
           git config user.name github-actions
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
@@ -184,7 +184,7 @@ jobs:
           SOURCE_BRANCH=$TARGET_BRANCH
           BASELINE_SOURCE_SHA=$BASELINE_SHA
           EVIDENCE_COMMIT_SHA=$FINAL_SHA
-          MAIN_SHA=$(git rev-parse origin/main)
+          MAIN_SHA=$MAIN_SHA
           REMOTE_WORKSET=$WORKSET
           REMOTE_MARKER=$MARKER
           REMOTE_MODEL=$MODEL
