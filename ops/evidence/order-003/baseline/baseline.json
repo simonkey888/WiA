@@ -1,12 +1,12 @@
 {
   "claim": "WIA_ORDER_003_BASELINE",
   "status": "BLOCKED",
-  "captured_at_utc": "2026-08-06T05:15:59Z",
+  "captured_at_utc": "2026-08-06T05:19:11Z",
   "repository": "simonkey888/WiA",
   "branch": "feat/wia-complete-end-to-end-v1",
   "account_id_sha256": "17bf5afd4fc670a0f79f4f41beb5e5d627a0d6974a71d6eaa28672823a7f5d86",
-  "source_sha": "23367f58a79e4628606c91a2892fb5580d1e7a79",
-  "source_tree": "3f7f59078cd867de3db025cee785bde2468e39e8",
+  "source_sha": "35985606d4f3c6fdcb2a491aa5c5319a7cc007fc",
+  "source_tree": "ed8f5ec766b394178b3eec7326bf5759ccdf1546",
   "main_sha": "a2cc358231d7eaf48d0096e6df4d8511171efbe5",
   "remote": {
     "url": "https://wia.simondalmasso44.workers.dev/",
@@ -14,24 +14,24 @@
     "marker": "WIA_FACE_VOICE_UX_V1_1",
     "model": "@cf/zai-org/glm-4.7-flash",
     "chat_models": [
-      "",
+      "@cf/qwen/qwen3-30b-a3b-fp8",
       ""
     ],
-    "deployment_id": "",
-    "version_id": "",
-    "deployment_created_at": ""
+    "deployment_id": "75faae3e-4eac-4bcc-8233-e4cf943edc06",
+    "version_id": "789e7960-2edb-4440-a14a-1f42c1c0f135",
+    "deployment_created_at": "2026-08-01T01:07:31.997191Z"
   },
   "validation": {
     "root": true,
     "health": true,
-    "chat_identity": false,
+    "chat_identity": true,
     "chat_criterion": false,
-    "cloudflare": false,
+    "cloudflare": true,
     "public_source_match": true
   },
   "failure": {
-    "step": "REMOTE_CHAT_IDENTITY",
-    "error": "POST /api/chat did not return a real non-degraded model reply after two bounded attempts"
+    "step": "REMOTE_CHAT_CRITERION",
+    "error": "POST /api/chat criterion probe did not return a real non-degraded model reply after two bounded attempts"
   },
   "security": {
     "billing_api_called": false,

@@ -1,5 +1,5 @@
 HTTP/2 200 
-date: Thu, 06 Aug 2026 05:15:22 GMT
+date: Thu, 06 Aug 2026 05:18:35 GMT
 content-type: application/manifest+json
 content-length: 485
 cf-cache-status: HIT
@@ -8,9 +8,9 @@ etag: "62d63a00c3eac2862f2754cb08b6ec26"
 permissions-policy: microphone=(self)
 referrer-policy: no-referrer
 x-content-type-options: nosniff
-report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=MbwYcAcwBlIVHmcUY9tKJdueatncFCPg99USh%2Fx4ApVZad6BIux5MWaeSlqjWZjL4cJu436wafEEJ1XFFQ04hlXgmK0KbreYWdx1BtdZonns4AxvU4Gtr%2F4nijCfxG9y5758yHwogpQ715%2FuxsFwP4go"}]}
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=Ooea7r0wysXN%2BfwPX%2FTezHTWse8ucnqIJDLrBIVfwOyn9eJ6BqV0klPFaDdO9ODy23H1OO80n9FiuBWlRk%2Fpg%2Bbpzd2CtfQaHEuTGBrqyOdY8HUAvh4770ySS7BNawCa5kbBoCDjP4Dy7FtVK61ent4J"}]}
 nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
 server: cloudflare
-cf-ray: a26b9036d9dec9bb-IAD
+cf-ray: a26b94ec88935024-SJC
 alt-svc: h3=":443"; ma=86400
 

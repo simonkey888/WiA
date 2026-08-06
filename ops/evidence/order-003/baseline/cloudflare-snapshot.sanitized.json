@@ -1,0 +1,413 @@
+{
+  "deployments": {
+    "result": {
+      "deployments": [
+        {
+          "id": "75faae3e-4eac-4bcc-8233-e4cf943edc06",
+          "source": "wrangler",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/triggered_by": "deployment"
+          },
+          "versions": [
+            {
+              "version_id": "789e7960-2edb-4440-a14a-1f42c1c0f135",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-08-01T01:07:31.997191Z"
+        },
+        {
+          "id": "dfea0fc4-864d-4eb1-9f0f-fc2ff526ccc2",
+          "source": "wrangler",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/triggered_by": "deployment"
+          },
+          "versions": [
+            {
+              "version_id": "39803dc3-21d5-4f39-975b-cebc0a9ff41a",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-07-31T14:46:45.018967Z"
+        },
+        {
+          "id": "f940fd72-57a7-44a9-a841-3b0199929ac8",
+          "source": "wrangler",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/triggered_by": "deployment"
+          },
+          "versions": [
+            {
+              "version_id": "391a7aa1-1d63-4036-b1e9-652ee2d20887",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-07-31T14:45:40.414319Z"
+        },
+        {
+          "id": "1e4bc5ca-46f4-49f1-9986-209f81225a36",
+          "source": "api",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/message": "Automatic deployment on upload.",
+            "workers/triggered_by": "upload"
+          },
+          "versions": [
+            {
+              "version_id": "800784e8-26e4-4a8b-84c9-b71f1b332b77",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-07-31T14:45:33.982586Z"
+        },
+        {
+          "id": "594218a5-2506-4f13-882f-9633e150a730",
+          "source": "api",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/message": "Automatic deployment on upload.",
+            "workers/triggered_by": "upload"
+          },
+          "versions": [
+            {
+              "version_id": "85020b14-1d71-47e2-ba31-3e2286cf5613",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-07-31T14:45:28.427202Z"
+        },
+        {
+          "id": "5c3ae96b-9ae1-4a71-bd15-8574efcf4591",
+          "source": "wrangler",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/triggered_by": "deployment"
+          },
+          "versions": [
+            {
+              "version_id": "18029dfd-94b3-450d-a1cf-3028f7a705c6",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-07-31T14:44:15.364683Z"
+        },
+        {
+          "id": "2fdd6af4-4917-48e2-97f6-67ac0b1ea061",
+          "source": "api",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/message": "Automatic deployment on upload.",
+            "workers/triggered_by": "upload"
+          },
+          "versions": [
+            {
+              "version_id": "221b8fe6-1cde-4aeb-b13b-ebac9d4a980c",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-07-31T14:43:17.234203Z"
+        },
+        {
+          "id": "d9baecda-df1c-4e9a-83a6-ded07bb67aaf",
+          "source": "api",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/message": "Automatic deployment on upload.",
+            "workers/triggered_by": "upload"
+          },
+          "versions": [
+            {
+              "version_id": "fe7c0219-968b-49c2-886b-19b257343156",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-07-31T14:43:08.811084Z"
+        },
+        {
+          "id": "3b6283e4-0aeb-40f3-ad9a-e3df8d0ce433",
+          "source": "wrangler",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/triggered_by": "deployment"
+          },
+          "versions": [
+            {
+              "version_id": "44c592e3-3f1a-4f74-9a92-5b416a5d1995",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-07-31T14:41:46.026941Z"
+        },
+        {
+          "id": "0faae175-cd5d-4ea9-a9b3-2fd5824388d9",
+          "source": "api",
+          "strategy": "percentage",
+          "author_email": "[REDACTED]",
+          "annotations": {
+            "workers/message": "Automatic deployment on upload.",
+            "workers/triggered_by": "upload"
+          },
+          "versions": [
+            {
+              "version_id": "f093ab9f-7967-4197-a82b-cae668f63529",
+              "percentage": 100
+            }
+          ],
+          "created_on": "2026-07-31T14:40:59.711578Z"
+        }
+      ]
+    },
+    "success": true,
+    "errors": [],
+    "messages": []
+  },
+  "versions": {
+    "result": {
+      "items": [
+        {
+          "id": "789e7960-2edb-4440-a14a-1f42c1c0f135",
+          "number": 45,
+          "metadata": {
+            "created_on": "2026-08-01T01:07:31.598773Z",
+            "source": "wrangler",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "version_upload"
+          }
+        },
+        {
+          "id": "39803dc3-21d5-4f39-975b-cebc0a9ff41a",
+          "number": 44,
+          "metadata": {
+            "created_on": "2026-07-31T14:46:44.632273Z",
+            "source": "wrangler",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "version_upload"
+          }
+        },
+        {
+          "id": "391a7aa1-1d63-4036-b1e9-652ee2d20887",
+          "number": 43,
+          "metadata": {
+            "created_on": "2026-07-31T14:45:40.033304Z",
+            "source": "wrangler",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "version_upload"
+          }
+        },
+        {
+          "id": "800784e8-26e4-4a8b-84c9-b71f1b332b77",
+          "number": 42,
+          "metadata": {
+            "created_on": "2026-07-31T14:45:33.982586Z",
+            "source": "api",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "upload"
+          }
+        },
+        {
+          "id": "85020b14-1d71-47e2-ba31-3e2286cf5613",
+          "number": 41,
+          "metadata": {
+            "created_on": "2026-07-31T14:45:28.427202Z",
+            "source": "api",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "upload"
+          }
+        },
+        {
+          "id": "18029dfd-94b3-450d-a1cf-3028f7a705c6",
+          "number": 40,
+          "metadata": {
+            "created_on": "2026-07-31T14:44:14.991343Z",
+            "source": "wrangler",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "version_upload"
+          }
+        },
+        {
+          "id": "221b8fe6-1cde-4aeb-b13b-ebac9d4a980c",
+          "number": 39,
+          "metadata": {
+            "created_on": "2026-07-31T14:43:17.234203Z",
+            "source": "api",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "upload"
+          }
+        },
+        {
+          "id": "fe7c0219-968b-49c2-886b-19b257343156",
+          "number": 38,
+          "metadata": {
+            "created_on": "2026-07-31T14:43:08.811084Z",
+            "source": "api",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "upload"
+          }
+        },
+        {
+          "id": "44c592e3-3f1a-4f74-9a92-5b416a5d1995",
+          "number": 37,
+          "metadata": {
+            "created_on": "2026-07-31T14:41:45.65167Z",
+            "source": "wrangler",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "version_upload"
+          }
+        },
+        {
+          "id": "f093ab9f-7967-4197-a82b-cae668f63529",
+          "number": 36,
+          "metadata": {
+            "created_on": "2026-07-31T14:40:59.711578Z",
+            "source": "api",
+            "author_id": "c7b3436f31610add5eb57edb84db5243",
+            "author_email": "[REDACTED]",
+            "has_preview": true
+          },
+          "annotations": {
+            "workers/triggered_by": "upload"
+          }
+        }
+      ]
+    },
+    "success": true,
+    "errors": null,
+    "messages": null,
+    "result_info": {
+      "page": 1,
+      "per_page": 10,
+      "count": 10,
+      "total_count": 45
+    }
+  },
+  "active_deployment": {
+    "result": {
+      "id": "75faae3e-4eac-4bcc-8233-e4cf943edc06",
+      "source": "wrangler",
+      "strategy": "percentage",
+      "author_email": "[REDACTED]",
+      "annotations": {
+        "workers/triggered_by": "deployment"
+      },
+      "versions": [
+        {
+          "version_id": "789e7960-2edb-4440-a14a-1f42c1c0f135",
+          "percentage": 100
+        }
+      ],
+      "created_on": "2026-08-01T01:07:31.997191Z"
+    },
+    "success": true,
+    "errors": [],
+    "messages": []
+  },
+  "active_version": {
+    "result": {
+      "id": "789e7960-2edb-4440-a14a-1f42c1c0f135",
+      "number": 45,
+      "metadata": {
+        "created_on": "2026-08-01T01:07:31.598773Z",
+        "source": "wrangler",
+        "author_id": "c7b3436f31610add5eb57edb84db5243",
+        "author_email": "[REDACTED]",
+        "has_preview": true
+      },
+      "annotations": {
+        "workers/triggered_by": "version_upload"
+      },
+      "resources": {
+        "script": {
+          "etag": "d3b4eea96603b7c34c2b3d57661723e9bd42f2cc44239e5b11e957b59931c087",
+          "handlers": [
+            "fetch"
+          ],
+          "last_deployed_from": "wrangler"
+        },
+        "script_runtime": {
+          "assets": {
+            "not_found_handling": "single-page-application",
+            "serve_directly": false,
+            "raw_run_worker_first": true
+          },
+          "compatibility_date": "2026-07-31",
+          "usage_model": "standard"
+        },
+        "bindings": [
+          {
+            "name": "AI",
+            "project": "<catalog>",
+            "type": "ai"
+          },
+          {
+            "name": "ASSETS",
+            "type": "assets"
+          },
+          {
+            "name": "CHAT_RATE_LIMITER",
+            "namespace_id": "9151101",
+            "simple": {
+              "limit": 12,
+              "period": 60
+            },
+            "type": "ratelimit"
+          },
+          {
+            "name": "DEPLOY_NOW",
+            "type": "secret_text"
+          }
+        ]
+      }
+    },
+    "success": true,
+    "errors": [],
+    "messages": []
+  }
+}
