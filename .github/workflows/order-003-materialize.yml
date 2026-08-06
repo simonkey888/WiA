@@ -64,6 +64,15 @@ jobs:
           grep -q '280' "$tmp/source/public/app.js"
           grep -q 'roastToggle' "$tmp/source/public/index.html"
 
+          # Deterministic archive repair: build gate originally referenced the face
+          # at public/ instead of the canonical public/assets/ location.
+          sed -i \
+            -e 's#public/wia-face-order003\.webp#public/assets/wia-face-order003.webp#g' \
+            -e 's#public/wia-face-order003\.png#public/assets/wia-face-order003.png#g' \
+            "$tmp/source/tests/build.mjs"
+          grep -q 'public/assets/wia-face-order003.webp' "$tmp/source/tests/build.mjs"
+          grep -q 'public/assets/wia-face-order003.png' "$tmp/source/tests/build.mjs"
+
           face_sha=$(sha256sum "$tmp/source/public/assets/wia-face-order003.webp" | awk '{print $1}')
           test "$face_sha" = "$FACE_WEBP_SHA256"
 
@@ -131,6 +140,9 @@ jobs:
             "source_branch": "feat/wia-complete-end-to-end-v1",
             "source_parent_sha": "$(git rev-parse HEAD)",
             "materialized_at_utc": "$(date -u +%FT%TZ)",
+            "deterministic_repairs": [
+              "tests/build.mjs face paths corrected from public/ to public/assets/"
+            ],
             "legacy_evidence_preserved": true,
             "bootstrap_chunks_removed_from_canonical_source": true,
             "legacy_workflows_removed_from_canonical_source": true,
