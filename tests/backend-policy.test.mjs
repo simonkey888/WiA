@@ -10,7 +10,7 @@ const wrangler = JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"));
 test("bounded conversational contract is enforced", () => {
   assert.match(worker, /MESSAGE_LIMIT = 600/);
   assert.match(worker, /HISTORY_LIMIT = 8/);
-  assert.match(worker, /MAX_TOKENS = 180/);
+  assert.match(worker, /MAX_TOKENS = 220/);
   assert.match(worker, /MODEL_ATTEMPTS = 2/);
   assert.match(html, /maxlength="600"/);
   assert.match(app, /previousHistory\.slice\(-HISTORY_LIMIT\)/);
@@ -25,9 +25,9 @@ test("rate limiting binding runs before inference", () => {
   assert.match(app, /x-wia-client/);
 });
 
-test("only the two approved free Workers AI models are candidates", () => {
-  assert.match(worker, /@cf\/zai-org\/glm-4\.7-flash/);
-  assert.match(worker, /@cf\/qwen\/qwen3-30b-a3b-fp8/);
+test("only the two selected Workers AI models are candidates", () => {
+  assert.match(worker, /@cf\/meta\/llama-3\.1-8b-instruct-fast/);
+  assert.match(worker, /@cf\/meta\/llama-3\.2-3b-instruct/);
   assert.match(worker, /for \(const model of \[PRIMARY_MODEL, FALLBACK_MODEL\]\)/);
   assert.doesNotMatch(worker, /openai|anthropic|gemini|elevenlabs/i);
 });
