@@ -1,4 +1,4 @@
-export const VOICE_SELECTOR_VERSION = "WIA_LATAM_VOICE_SELECTOR_V1_1";
+export const VOICE_SELECTOR_VERSION = "WIA_LATAM_VOICE_SELECTOR_ORDER_003";
 export const LATAM_LANG_PRIORITY = Object.freeze(["es-419", "es-MX", "es-US", "es-AR", "es-CO", "es-CL", "es-PE"]);
 export const QUALITY_TERMS = Object.freeze(["natural", "neural", "premium", "enhanced", "studio", "wavenet", "online"]);
 export const LOW_QUALITY_TERMS = Object.freeze(["compact", "espeak", "pico", "robot", "classic", "legacy"]);
