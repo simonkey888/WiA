@@ -29,16 +29,22 @@ jobs:
           E=ops/evidence/order-003/model-catalog
           R="$RUNNER_TEMP/order003-models.json"
           mkdir -p "$E"
-          test -n "${CF_API_TOKEN:-}"
           BASE="https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/models/search"
-          status=$(curl -sS --max-time 90 -G -H "Authorization: Bearer $CF_API_TOKEN" -H 'accept: application/json' -o "$R" -w '%{http_code}' --data-urlencode 'task=text-generation' --data-urlencode 'per_page=100' "$BASE")
-          test "$status" = 200
-          jq -e '.success==true' "$R" >/dev/null
-          jq '{success, result: [.result[] | {name, task, description, properties, beta, finetune, tags}]}' "$R" > "$E/catalog.json"
-          jq -n --argjson http_status "$status" --arg captured_at_utc "$(date -u +%FT%TZ)" --argjson count "$(jq '.result|length' "$R")" '{http_status:$http_status,captured_at_utc:$captured_at_utc,count:$count,billing_write:false,inference_called:false}' > "$E/meta.json"
+          status=$(curl -sS --max-time 90 -G -H "Authorization: Bearer $CF_API_TOKEN" -H 'accept: application/json' -o "$R" -w '%{http_code}' --data-urlencode 'task=text-generation' --data-urlencode 'per_page=100' "$BASE" || true)
+          if jq -e . "$R" >/dev/null 2>&1; then
+            jq 'walk(if type=="object" then with_entries(if (.key|test("token|secret|key|email";"i")) then .value="[REDACTED]" else . end) else . end)' "$R" > "$E/response.json"
+          else
+            jq -n --arg sha256 "$(sha256sum "$R" 2>/dev/null|awk '{print $1}')" '{non_json:true,body_sha256:$sha256}' > "$E/response.json"
+          fi
+          success=false
+          if [ "$status" = 200 ] && jq -e '.success==true' "$R" >/dev/null 2>&1; then success=true; fi
+          jq -n --argjson http_status "${status:-0}" --arg captured_at_utc "$(date -u +%FT%TZ)" --argjson success "$success" '{http_status:$http_status,captured_at_utc:$captured_at_utc,success:$success,billing_write:false,inference_called:false}' > "$E/meta.json"
+          if [ "$success" = true ]; then
+            jq '{success, result: [.result[] | {name, task, description, properties, beta, finetune, tags}]}' "$R" > "$E/catalog.json"
+          fi
           unset CF_API_TOKEN
           git config user.name github-actions
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add "$E"
-          git commit -m 'docs: preserve Order 003 Workers AI catalog [skip ci]'
+          git commit -m 'docs: preserve Order 003 Workers AI catalog diagnostic [skip ci]'
           git push origin HEAD:refs/heads/feat/wia-complete-end-to-end-v1
