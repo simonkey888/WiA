@@ -2,11 +2,11 @@ const WORKSET = "WIA-COMPLETE-END-TO-END-V1";
 const MARKER = "WIA_COMPLETE_END_TO_END_V1";
 const FACE_ASSET = "/assets/wia-face-v1-1.webp";
 const VOICE_SELECTOR_VERSION = "WIA_LATAM_VOICE_SELECTOR_ORDER_003";
-const PRIMARY_MODEL = "@cf/zai-org/glm-4.7-flash";
-const FALLBACK_MODEL = "@cf/qwen/qwen3-30b-a3b-fp8";
+const PRIMARY_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
+const FALLBACK_MODEL = "@cf/meta/llama-3.2-3b-instruct";
 const MESSAGE_LIMIT = 600;
 const HISTORY_LIMIT = 8;
-const MAX_TOKENS = 180;
+const MAX_TOKENS = 220;
 const MODEL_ATTEMPTS = 2;
 const REACTIONS = Object.freeze(["neutral", "warm", "amused", "curious", "skeptical", "surprised", "concerned"]);
 
