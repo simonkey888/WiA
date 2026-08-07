@@ -1,5 +1,6 @@
 :root {
   --visual-height: 100dvh;
+  --visual-offset-top: 0px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   color-scheme: dark;
@@ -25,21 +26,21 @@ button { min-width: 48px; min-height: 48px; }
 
 .app {
   position: relative;
-  width: min(100vw, 480px);
+  width: min(100vw, 430px);
   height: var(--visual-height);
   min-height: 100svh;
   overflow: hidden;
   isolation: isolate;
   background:
-    radial-gradient(ellipse at 50% 34%, rgba(105, 55, 139, .30) 0%, rgba(38, 18, 55, .24) 34%, transparent 65%),
-    linear-gradient(180deg, #100817 0%, #0b0712 56%, #07050b 100%);
+    radial-gradient(ellipse at 50% 35%, rgba(105, 55, 139, .27) 0%, rgba(38, 18, 55, .20) 36%, transparent 66%),
+    linear-gradient(180deg, #100817 0%, #0b0712 57%, #07050b 100%);
 }
 .app::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle at 50% 43%, transparent 0 42%, rgba(0,0,0,.24) 100%);
+  background: radial-gradient(circle at 50% 43%, transparent 0 43%, rgba(0,0,0,.22) 100%);
 }
 
 .presence {
@@ -49,26 +50,32 @@ button { min-width: 48px; min-height: 48px; }
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: max(calc(var(--safe-top) + 17dvh), 116px);
+  padding-top: max(calc(var(--safe-top) + 17dvh), 118px);
   pointer-events: none;
-  transition: padding-top .38s cubic-bezier(.2,.75,.25,1);
+  transition: padding-top .32s cubic-bezier(.2,.75,.25,1);
 }
 .face {
   position: relative;
-  width: min(78vw, 286px);
+  width: min(67vw, 272px);
   aspect-ratio: 760 / 849;
   pointer-events: auto;
   cursor: pointer;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
   outline: none;
-  transform-origin: 50% 45%;
+  transform: translateZ(0);
   filter: drop-shadow(0 22px 38px rgba(0,0,0,.56));
-  animation: idle-presence 7.4s ease-in-out infinite alternate;
-  transition: width .38s cubic-bezier(.2,.75,.25,1), filter .25s ease, transform .25s ease;
+  transition: width .32s cubic-bezier(.2,.75,.25,1), filter .2s ease;
+  contain: layout paint;
 }
 .face:focus-visible { filter: drop-shadow(0 0 18px rgba(184, 112, 255, .70)) drop-shadow(0 22px 38px rgba(0,0,0,.56)); }
 .face-picture, .face-base { display: block; width: 100%; height: 100%; }
+.face-picture {
+  transform-origin: 50% 58%;
+  animation: idle-visual 7.8s ease-in-out infinite alternate;
+  will-change: transform;
+}
 .face-base { object-fit: contain; object-position: center; pointer-events: none; }
 .face-expression-layer { position: absolute; inset: 0; pointer-events: none; }
 .eyelid {
@@ -92,9 +99,9 @@ button { min-width: 48px; min-height: 48px; }
   background: rgba(179, 86, 238, .28);
   filter: blur(13px);
   opacity: 0;
-  transition: opacity .2s ease;
+  transition: opacity .18s ease;
 }
-.face.speaking .speech-glow { opacity: .62; animation: speech-light 620ms ease-in-out infinite alternate; }
+.face.speaking .speech-glow { opacity: .58; animation: speech-light 640ms ease-in-out infinite alternate; }
 .face.listening { filter: drop-shadow(0 0 22px rgba(184, 96, 255, .62)) drop-shadow(0 22px 38px rgba(0,0,0,.56)); }
 .face.listening::after {
   content: "";
@@ -105,29 +112,29 @@ button { min-width: 48px; min-height: 48px; }
   box-shadow: 0 0 28px rgba(161, 70, 226, .32);
   animation: listen-halo 1.35s ease-in-out infinite alternate;
 }
-.face.thinking { animation: thinking-presence 2.8s ease-in-out infinite alternate; }
+.face.thinking .face-picture { animation: thinking-visual 2.8s ease-in-out infinite alternate; }
 
 .panel {
   position: absolute;
   z-index: 4;
-  left: 10px;
-  right: 10px;
-  bottom: max(10px, var(--safe-bottom));
-  height: min(55dvh, 480px);
-  max-height: calc(var(--visual-height) - 255px - var(--safe-top) - var(--safe-bottom));
+  left: 8px;
+  right: 8px;
+  top: max(calc(var(--safe-top) + 220px), 28dvh);
+  bottom: max(8px, var(--safe-bottom));
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
   visibility: hidden;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(calc(100% + 24px));
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 24px;
-  background: rgba(13, 8, 20, .94);
+  transform: translateY(24px);
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 23px;
+  background: rgba(13, 8, 20, .95);
   box-shadow: 0 24px 72px rgba(0,0,0,.62);
   backdrop-filter: blur(18px);
-  transition: transform .38s cubic-bezier(.2,.75,.25,1), opacity .22s ease, visibility 0s linear .38s;
+  transition: transform .32s cubic-bezier(.2,.75,.25,1), opacity .2s ease, visibility 0s linear .32s;
 }
 .app.open .panel {
   visibility: visible;
@@ -136,16 +143,45 @@ button { min-width: 48px; min-height: 48px; }
   transform: translateY(0);
   transition-delay: 0s;
 }
-.app.open .presence { padding-top: max(calc(var(--safe-top) + 18px), 28px); }
-.app.open .face { width: clamp(166px, 46vw, 190px); animation-duration: 8.2s; }
+.app.open .presence { padding-top: max(calc(var(--safe-top) + 18px), 24px); }
+.app.open .face { width: clamp(164px, 46vw, 184px); }
+
+.panel-head {
+  flex: 0 0 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px 4px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.panel-title { font-size: 13px; font-weight: 700; letter-spacing: .02em; color: rgba(244,235,250,.78); }
+.roast-toggle {
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  background: #1a1022;
+  color: rgba(246,238,250,.72);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.roast-toggle[aria-pressed="true"] {
+  border-color: rgba(219,110,255,.66);
+  background: #54256e;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(178,67,220,.17);
+}
 
 .messages {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  padding: 18px 13px 8px;
+  padding: 14px 12px 8px;
   scroll-padding-bottom: 12px;
 }
 .msg {
@@ -161,9 +197,10 @@ button { min-width: 48px; min-height: 48px; }
 .msg.user { margin-left: auto; background: linear-gradient(135deg, #7b3fc1, #5d2b91); }
 .msg.wia { background: #21142b; border: 1px solid rgba(255,255,255,.08); }
 .status {
+  flex: 0 0 auto;
   min-height: 21px;
   padding: 0 14px 4px;
-  color: rgba(236,220,248,.62);
+  color: rgba(236,220,248,.68);
   font-size: 11px;
   text-align: center;
   overflow: hidden;
@@ -171,13 +208,15 @@ button { min-width: 48px; min-height: 48px; }
   white-space: nowrap;
 }
 .composer {
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
   align-items: end;
   gap: 8px;
-  padding: 10px;
+  padding: 9px 10px;
   padding-bottom: max(10px, var(--safe-bottom));
   border-top: 1px solid rgba(255,255,255,.09);
+  background: rgba(13,8,20,.98);
 }
 .composer textarea {
   width: 100%;
@@ -206,24 +245,28 @@ button { min-width: 48px; min-height: 48px; }
 }
 .composer button:disabled { opacity: .45; }
 
-@keyframes idle-presence {
-  0% { transform: translateY(0) rotate(-.12deg) scale(1); filter: brightness(1) drop-shadow(0 22px 38px rgba(0,0,0,.56)); }
-  58% { transform: translateY(-1.4px) rotate(.10deg) scale(1.005); filter: brightness(1.014) drop-shadow(0 22px 38px rgba(0,0,0,.56)); }
-  100% { transform: translateY(1px) rotate(-.06deg) scale(1.002); filter: brightness(1.004) drop-shadow(0 22px 38px rgba(0,0,0,.56)); }
+@keyframes idle-visual {
+  0% { transform: translateY(0) scale(1); }
+  58% { transform: translateY(-1px) scale(1.005); }
+  100% { transform: translateY(1px) scale(1.002); }
 }
 @keyframes natural-blink {
   0%,100% { opacity: 0; transform: scaleY(.08); }
   42%,58% { opacity: 1; transform: scaleY(1); }
 }
-@keyframes speech-light { from { transform: scaleX(.84); opacity: .32; } to { transform: scaleX(1.08); opacity: .68; } }
-@keyframes listen-halo { from { opacity: .45; transform: scale(.985); } to { opacity: .9; transform: scale(1.012); } }
-@keyframes thinking-presence { from { transform: translateY(0) rotate(-.3deg) scale(1); } to { transform: translateY(-1px) rotate(.35deg) scale(1.006); } }
+@keyframes speech-light { from { transform: scaleX(.84); opacity: .30; } to { transform: scaleX(1.07); opacity: .64; } }
+@keyframes listen-halo { from { opacity: .42; transform: scale(.988); } to { opacity: .86; transform: scale(1.01); } }
+@keyframes thinking-visual { from { transform: translateY(0) scale(1); } to { transform: translateY(-1px) scale(1.006); } }
 
 @media (max-height: 700px) {
-  .presence { padding-top: max(calc(var(--safe-top) + 92px), 92px); }
-  .face { width: min(68vw, 250px); }
-  .app.open .face { width: 158px; }
-  .panel { max-height: calc(var(--visual-height) - 220px - var(--safe-top) - var(--safe-bottom)); }
+  .presence { padding-top: max(calc(var(--safe-top) + 100px), 100px); }
+  .face { width: min(64vw, 238px); }
+  .app.open .face { width: 156px; }
+  .panel { top: max(calc(var(--safe-top) + 198px), 28dvh); }
+}
+@media (min-width: 601px) {
+  body { background: #050307; }
+  .app { box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 30px 90px rgba(0,0,0,.55); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
