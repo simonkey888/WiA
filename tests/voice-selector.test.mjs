@@ -5,7 +5,7 @@ import { chooseVoice, scoreVoice, VOICE_SELECTOR_VERSION, VOICE_PRESETS, ACTIVE_
 const voice = (name, lang, localService = false, isDefault = false) => ({ name, lang, localService, default: isDefault, voiceURI: `${name}:${lang}` });
 
 test("selector version and three physical-test presets are explicit", () => {
-  assert.equal(VOICE_SELECTOR_VERSION, "WIA_LATAM_VOICE_SELECTOR_V1_1");
+  assert.equal(VOICE_SELECTOR_VERSION, "WIA_LATAM_VOICE_SELECTOR_ORDER_003");
   assert.equal(VOICE_PRESETS.length, 3);
   assert.equal(ACTIVE_PRESET.id, "balanced");
   assert.ok(ACTIVE_PRESET.rate >= 0.94 && ACTIVE_PRESET.rate <= 0.98);
