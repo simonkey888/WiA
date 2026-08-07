@@ -13,17 +13,17 @@ const app = read("public/app.js");
 const sw = read("public/sw.js");
 const manifest = JSON.parse(read("public/assets/wia-face-v1-1-manifest.json"));
 
-test("workset and health contract", () => {
-  assert.match(worker, /WIA-FACE-VOICE-UX-V1_1/);
-  assert.match(worker, /WIA_FACE_VOICE_UX_V1_1/);
-  assert.match(worker, /WIA_LATAM_VOICE_SELECTOR_V1_1/);
+test("Order 003 workset and health contract", () => {
+  assert.match(worker, /WIA-COMPLETE-END-TO-END-V1/);
+  assert.match(worker, /WIA_COMPLETE_END_TO_END_V1/);
+  assert.match(worker, /WIA_LATAM_VOICE_SELECTOR_ORDER_003/);
+  assert.match(worker, /roast_mode_default:\s*false/);
+  assert.match(worker, /explicit_opt_in/);
   assert.match(worker, /\/api\/health/);
   assert.match(worker, /\/api\/chat/);
-  assert.match(worker, /@cf\/zai-org\/glm-4\.7-flash/);
-  assert.match(worker, /@cf\/qwen\/qwen3-30b-a3b-fp8/);
 });
 
-test("new raster face is active and old triangulated assets are absent", () => {
+test("canonical raster face remains single active identity", () => {
   assert.match(html, /wia-face-v1-1\.webp/);
   assert.match(html, /wia-face-v1-1\.png/);
   assert.doesNotMatch(html + css + app + worker, /wia-face-base\.v1\.svg|wia-face-layer-2\.v1\.svg|wia-face-layer-3-4\.v1\.svg/);
@@ -32,22 +32,47 @@ test("new raster face is active and old triangulated assets are absent", () => {
   assert.equal(manifest.alpha, true);
 });
 
-test("mobile initial state and composition", () => {
+test("360x800 mobile initial state and keyboard-safe composition", () => {
   assert.match(html, /<section class="panel"[^>]*aria-hidden="true"[^>]*inert/);
-  assert.match(html, /viewport-fit=cover/);
-  assert.match(css, /width:\s*min\(78vw, 286px\)/);
-  assert.match(css, /\.app\.open \.face\s*\{[^}]*width:\s*clamp\(166px, 46vw, 190px\)/s);
-  assert.match(css, /overflow:\s*hidden/);
+  assert.match(html, /width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no/);
+  assert.match(css, /width:\s*min\(67vw, 272px\)/);
+  assert.match(css, /\.app\.open \.face\s*\{[^}]*width:\s*clamp\(164px, 46vw, 184px\)/s);
+  assert.match(css, /height:\s*var\(--visual-height\)/);
   assert.match(app, /visualViewport/);
+  assert.match(app, /--visual-height/);
+  assert.match(app, /orientationchange/);
 });
 
-test("interaction and cache contracts", () => {
+test("face hit target is stable while inner visual receives organic motion", () => {
+  const faceRule = css.match(/\.face\s*\{[\s\S]*?\n\}/)?.[0] || "";
+  assert.doesNotMatch(faceRule, /animation:/);
+  assert.match(css, /\.face-picture\s*\{[\s\S]*animation:\s*idle-visual/s);
+});
+
+test("interaction is tap-only with 280ms hold, cancellation and abort control", () => {
+  assert.match(app, /LONG_PRESS_MS = 280/);
   assert.match(app, /pointerdown/);
+  assert.match(app, /pointermove/);
   assert.match(app, /pointerup/);
-  assert.match(app, /380/);
+  assert.match(app, /pointercancel/);
+  assert.match(app, /contextmenu/);
+  assert.match(app, /AbortController/);
+  assert.match(app, /abortChat/);
+  assert.match(app, /cancelListening/);
   assert.match(app, /stopSpeech/);
-  assert.match(sw, /wia-v1-1-shell-20260731/);
+});
+
+test("ROAST control is explicit, hidden with chat initially and session-scoped", () => {
+  assert.match(html, /id="roastToggle"/);
+  assert.match(html, /aria-pressed="false"/);
+  assert.match(app, /let roastMode = false/);
+  assert.match(app, /roast:\s*roastMode/);
+  assert.doesNotMatch(app, /localStorage.*roast|roast.*localStorage/i);
+});
+
+test("PWA cache is rotated and API is never shell-cached", () => {
+  assert.match(sw, /wia-order003-shell-20260807/);
   assert.match(sw, /skipWaiting/);
   assert.match(sw, /clients\.claim/);
-  assert.match(sw, /caches\.delete/);
+  assert.match(sw, /url\.pathname\.startsWith\("\/api\/"\)/);
 });
