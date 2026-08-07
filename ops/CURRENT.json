@@ -1,11 +1,21 @@
 {
   "project": "WiA",
-  "workset": "WIA-FACE-VOICE-UX-V1_1",
-  "marker": "WIA_FACE_VOICE_UX_V1_1",
-  "branch": "feat/wia-face-voice-ux-v1-1",
+  "workset": "WIA-COMPLETE-END-TO-END-V1",
+  "marker": "WIA_COMPLETE_END_TO_END_V1",
+  "branch": "feat/wia-complete-end-to-end-v1",
   "worker": "wia",
   "canonical_url": "https://wia.simondalmasso44.workers.dev/",
-  "status": "IMPLEMENTATION_READY_FOR_TECHNICAL_GATES",
-  "physical_face_validation": "PENDING_SIMON",
-  "physical_voice_validation": "PENDING_SIMON"
+  "status": "TECHNICAL_PASS_HUMAN_ACCEPTANCE_PENDING",
+  "deploy_source_sha": "1aa291758c86868209767adaf6f636e006593721",
+  "final_evidence_sha": "2cee89df6ab05bf7994bcd4a95a288b49fde2bf7",
+  "deployment_id": "e27744d9-a828-4735-92df-43bcebf5ae4a",
+  "version_id": "0b14a8be-6188-46c2-86de-f65196986167",
+  "primary_model": "@cf/meta/llama-3.1-8b-instruct-fast",
+  "fallback_model": "@cf/meta/llama-3.2-3b-instruct",
+  "roast_mode_default": false,
+  "roast_mode_activation": "explicit_opt_in_session",
+  "technical_validation": "PASS",
+  "physical_face_validation": "PENDING_HUMAN_ANDROID_ACCEPTANCE",
+  "physical_voice_validation": "PENDING_HUMAN_ANDROID_ACCEPTANCE",
+  "next_gate": "HUMAN_FACE_VOICE_ANDROID_ACCEPTANCE"
 }
