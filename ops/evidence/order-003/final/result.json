@@ -1,0 +1,33 @@
+{
+  "claim": "WIA_ORDER_003_FINAL_REMOTE",
+  "status": "PASS",
+  "captured_at_utc": "2026-08-07T04:55:07Z",
+  "evidence_source_sha": "3e1513575a4f37ddc1ad09cdc7d53575f1897112",
+  "deploy_source_sha": "1aa291758c86868209767adaf6f636e006593721",
+  "cloudflare": {
+    "account_id_sha256": "17bf5afd4fc670a0f79f4f41beb5e5d627a0d6974a71d6eaa28672823a7f5d86",
+    "deployment_id": "e27744d9-a828-4735-92df-43bcebf5ae4a",
+    "version_id": "0b14a8be-6188-46c2-86de-f65196986167",
+    "deployed_at": "2026-08-07T04:53:15.050253Z"
+  },
+  "runtime": {
+    "root": true,
+    "health": true,
+    "assets": true,
+    "pwa": true,
+    "identity_chat": true,
+    "pushback_chat": true,
+    "ambiguity_chat": true,
+    "roast_chat": true,
+    "primary_model": "@cf/meta/llama-3.1-8b-instruct-fast",
+    "fallback_model": "@cf/meta/llama-3.2-3b-instruct"
+  },
+  "security": {
+    "billing_write": false,
+    "paid_provider": false,
+    "secret_output": false
+  },
+  "cost": {
+    "zero_cost_policy": true
+  }
+}

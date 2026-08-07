@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "reply": "Soy una presencia convers",
+  "degraded": false,
+  "model": "@cf/qwen/qwen3-30b-a3b-fp8",
+  "reaction": "neutral",
+  "intensity": 0.5,
+  "repaired": true,
+  "fallback_reason": "EMPTY_MODEL_RESPONSE"
+}

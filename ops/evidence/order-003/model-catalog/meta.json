@@ -1,0 +1,7 @@
+{
+  "http_status": 403,
+  "captured_at_utc": "2026-08-07T04:50:15Z",
+  "success": false,
+  "billing_write": false,
+  "inference_called": false
+}

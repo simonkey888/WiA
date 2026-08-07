@@ -1,0 +1,59 @@
+name: WiA Canonical Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - src/**
+      - public/**
+      - tests/**
+      - package.json
+      - package-lock.json
+      - wrangler.jsonc
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wia-production-deploy
+  cancel-in-progress: false
+
+env:
+  BASE_URL: https://wia.simondalmasso44.workers.dev
+
+jobs:
+  validate-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Check, test and build
+        run: |
+          set -Eeuo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run check
+          npm test
+          npm run build
+          rm -rf node_modules dist
+      - name: Deploy existing Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.DEPLOY_NOW }}
+          accountId: b21fa81d12acb663798f9f7c51801955
+          wranglerVersion: "4.116.0"
+          command: deploy
+      - name: Validate production contract
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for attempt in $(seq 1 20); do
+            status=$(curl -sS --max-time 20 -o /tmp/wia-health.json -w '%{http_code}' "$BASE_URL/api/health" || true)
+            if [ "$status" = 200 ] && jq -e '.ok==true and .worker=="wia" and .workset=="WIA-COMPLETE-END-TO-END-V1" and .marker=="WIA_COMPLETE_END_TO_END_V1" and .roast_mode_default==false and .roast_mode_activation=="explicit_opt_in"' /tmp/wia-health.json >/dev/null 2>&1; then exit 0; fi
+            sleep 3
+          done
+          cat /tmp/wia-health.json >&2 || true
+          exit 1

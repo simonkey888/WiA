@@ -1,0 +1,58 @@
+[
+  {
+    "remote": "root",
+    "local": "public/index.html",
+    "remote_sha256": "53427dfedf94d7953f6b56b2c8af18121599eb96fd25ddf986e801fd9c35fd6d",
+    "local_sha256": "53427dfedf94d7953f6b56b2c8af18121599eb96fd25ddf986e801fd9c35fd6d",
+    "match": true
+  },
+  {
+    "remote": "manifest",
+    "local": "public/manifest.webmanifest",
+    "remote_sha256": "00e12b056fc8a2e664ea3ea76f6ff3eebf0c9c717a941dfe6881cd378f8f6b0f",
+    "local_sha256": "00e12b056fc8a2e664ea3ea76f6ff3eebf0c9c717a941dfe6881cd378f8f6b0f",
+    "match": true
+  },
+  {
+    "remote": "service-worker",
+    "local": "public/sw.js",
+    "remote_sha256": "e70691f1d73bb17db3c14ebc98f80485052b29e58ec2df1a7cbb3bad02f2c9fb",
+    "local_sha256": "e70691f1d73bb17db3c14ebc98f80485052b29e58ec2df1a7cbb3bad02f2c9fb",
+    "match": true
+  },
+  {
+    "remote": "app-js",
+    "local": "public/app.js",
+    "remote_sha256": "4a21b1ff6d2e25355e42b5028148188096a0404aefbd21170aa72b9813f63b55",
+    "local_sha256": "4a21b1ff6d2e25355e42b5028148188096a0404aefbd21170aa72b9813f63b55",
+    "match": true
+  },
+  {
+    "remote": "styles-css",
+    "local": "public/styles.css",
+    "remote_sha256": "692d8635d8a38a338b322cf874ebc1049616b3e0ec962080891e14dbf9e60369",
+    "local_sha256": "692d8635d8a38a338b322cf874ebc1049616b3e0ec962080891e14dbf9e60369",
+    "match": true
+  },
+  {
+    "remote": "voice-selector-js",
+    "local": "public/voice-selector.js",
+    "remote_sha256": "996b46de50cb3acd5e848e5b598fe90e4fa61109ff1b261e93d6da22a65b2601",
+    "local_sha256": "996b46de50cb3acd5e848e5b598fe90e4fa61109ff1b261e93d6da22a65b2601",
+    "match": true
+  },
+  {
+    "remote": "face-webp",
+    "local": "public/assets/wia-face-v1-1.webp",
+    "remote_sha256": "585c92d4e06a68bb3c44897dc567a9f2aa48fdf814a6abfae5143e73570b715a",
+    "local_sha256": "585c92d4e06a68bb3c44897dc567a9f2aa48fdf814a6abfae5143e73570b715a",
+    "match": true
+  },
+  {
+    "remote": "face-png",
+    "local": "public/assets/wia-face-v1-1.png",
+    "remote_sha256": "8bc1ea43a079f76b71bd8a7c6fc98ee19b6ca7793d82e6e9ada8c87cdac03cc2",
+    "local_sha256": "8bc1ea43a079f76b71bd8a7c6fc98ee19b6ca7793d82e6e9ada8c87cdac03cc2",
+    "match": true
+  }
+]

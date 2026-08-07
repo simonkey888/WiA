@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0b0712">
+  <meta name="color-scheme" content="dark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preload" href="/assets/wia-face-v1-1.webp" as="image" type="image/webp">
+  <link rel="stylesheet" href="/styles.css">
+  <title>WiA</title>
+</head>
+<body>
+  <main class="app" id="app">
+    <section class="presence" aria-label="WiA">
+      <div class="face" id="face" role="button" tabindex="0" aria-label="Abrir chat. Mantener para hablar">
+        <picture class="face-picture" aria-hidden="true">
+          <source srcset="/assets/wia-face-v1-1.webp" type="image/webp">
+          <img class="face-base" src="/assets/wia-face-v1-1.png" alt="" draggable="false" width="760" height="849">
+        </picture>
+        <div class="face-expression-layer" aria-hidden="true">
+          <span class="eyelid eyelid-left"></span>
+          <span class="eyelid eyelid-right"></span>
+          <span class="speech-glow"></span>
+        </div>
+        <span class="sr-only">WiA</span>
+      </div>
+    </section>
+
+    <section class="panel" id="panel" aria-hidden="true" inert>
+      <header class="panel-head">
+        <span class="panel-title">WiA</span>
+        <button class="roast-toggle" id="roastToggle" type="button" aria-pressed="false" aria-label="Activar ROAST MODE">ROAST</button>
+      </header>
+      <div class="messages" id="messages" aria-live="polite" aria-relevant="additions text"></div>
+      <div class="status" id="status" aria-live="polite"></div>
+      <form class="composer" id="form">
+        <textarea id="input" rows="1" maxlength="600" autocomplete="off" enterkeyhint="send" aria-label="Mensaje" placeholder="Decime algo"></textarea>
+        <button type="submit" aria-label="Enviar mensaje">Enviar</button>
+      </form>
+    </section>
+  </main>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

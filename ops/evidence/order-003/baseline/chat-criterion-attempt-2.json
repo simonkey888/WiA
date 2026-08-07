@@ -1,0 +1,14 @@
+{
+  "ok": false,
+  "error": "MODEL_UNAVAILABLE",
+  "failures": [
+    {
+      "model": "@cf/zai-org/glm-4.7-flash",
+      "error": "EMPTY_MODEL_RESPONSE"
+    },
+    {
+      "model": "@cf/qwen/qwen3-30b-a3b-fp8",
+      "error": "EMPTY_MODEL_RESPONSE"
+    }
+  ]
+}
