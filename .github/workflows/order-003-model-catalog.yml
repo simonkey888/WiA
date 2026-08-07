@@ -31,7 +31,8 @@ jobs:
           mkdir -p "$E"
           test -n "${CF_API_TOKEN:-}"
           test -n "${CF_ACCOUNT_ID:-}"
-          status=$(curl -sS --max-time 90 -H "Authorization: Bearer $CF_API_TOKEN" -H 'accept: application/json' -o "$R" -w '%{http_code}' "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/ai/models/search?task=text-generation&per_page=100")
+          BASE="https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/models/search"
+          status=$(curl -sS --max-time 90 -G -H "Authorization: Bearer $CF_API_TOKEN" -H 'accept: application/json' -o "$R" -w '%{http_code}' --data-urlencode 'task=text-generation' --data-urlencode 'per_page=100' "$BASE")
           test "$status" = 200
           jq -e '.success==true' "$R" >/dev/null
           jq '{success, result: [.result[] | {name, task, description, properties, beta, finetune, tags}]}' "$R" > "$E/catalog.json"
