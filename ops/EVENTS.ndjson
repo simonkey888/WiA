@@ -1,3 +1,7 @@
 {"seq":1,"event":"WORKSET_OPENED","workset":"WIA-FACE-VOICE-UX-V1_1","marker":"WIA_FACE_VOICE_UX_V1_1","source":"Issue #2"}
 {"seq":2,"event":"AUTHORITY_RECONCILED","message_limit":600,"history_limit":8,"max_tokens":180,"rate_limiter":"CHAT_RATE_LIMITER","reaction_enum":["neutral","warm","amused","curious","skeptical","surprised","concerned"]}
 {"seq":3,"event":"VISUAL_IMPLEMENTATION_STAGED","face_asset":"/assets/wia-face-v1-1.webp","old_triangulated_face_removed":true,"physical_validation":"PENDING_SIMON"}
+{"seq":4,"event":"ORDER_003_OPENED","workset":"WIA-COMPLETE-END-TO-END-V1","marker":"WIA_COMPLETE_END_TO_END_V1","source":"Issue #3","roast_mode_default":false}
+{"seq":5,"event":"ORDER_003_IMPLEMENTED","mobile_first":true,"voice_first":true,"pwa":true,"long_press_ms":280,"roast_activation":"explicit_opt_in_session","tests":18,"build":"PASS"}
+{"seq":6,"event":"ORDER_003_DEPLOYED","deploy_source_sha":"1aa291758c86868209767adaf6f636e006593721","deployment_id":"e27744d9-a828-4735-92df-43bcebf5ae4a","version_id":"0b14a8be-6188-46c2-86de-f65196986167","remote_validation":"PASS","billing_write":false,"paid_provider":false}
+{"seq":7,"event":"ORDER_003_TECHNICAL_PASS","final_evidence_sha":"2cee89df6ab05bf7994bcd4a95a288b49fde2bf7","remaining_gate":"HUMAN_FACE_VOICE_ANDROID_ACCEPTANCE"}
