@@ -1,0 +1,55 @@
+name: WiA Order 003 Chat Diagnostic
+
+on:
+  push:
+    branches: [feat/wia-complete-end-to-end-v1]
+    paths: [.github/workflows/order-003-chat-diagnostic.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BASE_URL: https://wia.simondalmasso44.workers.dev
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/wia-complete-end-to-end-v1
+          fetch-depth: 0
+      - name: Capture one fresh identity probe
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          set +x
+          E=ops/evidence/order-003/chat-diagnostic
+          mkdir -p "$E"
+          client="order003-diag-$GITHUB_RUN_ID"
+          payload='{"message":"Respondé en una frase breve: ¿quién sos?","history":[],"roast":false}'
+          status=$(curl -sS --max-time 150 -o "$E/response.json" -w '%{http_code}' -X POST "$BASE_URL/api/chat" -H 'content-type: application/json; charset=utf-8' -H "x-wia-client: $client" --data "$payload" || true)
+          jq -n --argjson http_status "${status:-0}" --arg captured_at_utc "$(date -u +%FT%TZ)" '{http_status:$http_status,captured_at_utc:$captured_at_utc}' > "$E/meta.json"
+          jq . "$E/response.json" >/dev/null
+          git config user.name github-actions
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add "$E"
+          git commit -m 'docs: preserve Order 003 chat diagnostic [skip ci]'
+          git push origin HEAD:refs/heads/feat/wia-complete-end-to-end-v1
+          ok=false
+          if [ "$status" = 200 ] && jq -e '.ok==true and .degraded==false and (.reply|type=="string" and length>0)' "$E/response.json" >/dev/null 2>&1; then ok=true; fi
+          cat > "$RUNNER_TEMP/comment.txt" <<EOF
+          ARQ_ORDER_003_CHAT_DIAGNOSTIC
+
+          STATUS=$([ "$ok" = true ] && echo PASS || echo BLOCKED)
+          HTTP_STATUS=$status
+          EVIDENCE_COMMIT=$(git rev-parse HEAD)
+          EVIDENCE_PATH=$E/response.json
+          REMOTE_MUTATION=NONE
+          BILLING_WRITE=FALSE
+          EOF
+          sed -i 's/^          //' "$RUNNER_TEMP/comment.txt"
+          gh issue comment 3 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.txt"
