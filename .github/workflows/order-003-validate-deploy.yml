@@ -19,6 +19,7 @@ env:
   BASE_URL: https://wia.simondalmasso44.workers.dev
   ISSUE_NUMBER: "3"
   WORKER_NAME: wia
+  VALIDATION_REV: "2"
 
 jobs:
   validate-deploy:
