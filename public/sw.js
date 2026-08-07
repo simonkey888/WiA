@@ -1,4 +1,4 @@
-const CACHE_NAME = "wia-v1-1-shell-20260731";
+const CACHE_NAME = "wia-order003-shell-20260807";
 const SHELL = [
   "/styles.css",
   "/app.js",
@@ -33,7 +33,7 @@ self.addEventListener("fetch", (event) => {
     const response = await fetch(request);
     if (response.ok) {
       const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
+      await cache.put(request, response.clone());
     }
     return response;
   })());
