@@ -19,7 +19,9 @@ test("bounded conversational contract is enforced", () => {
 test("rate limiting binding runs before inference", () => {
   assert.deepEqual(wrangler.ratelimits, [{ name: "CHAT_RATE_LIMITER", namespace_id: "9151101", simple: { limit: 12, period: 60 } }]);
   assert.match(worker, /enforceRateLimit\(request, env\)/);
-  assert.ok(worker.indexOf("await enforceRateLimit") < worker.indexOf("runModelBounded(env, model"));
+  const handler = worker.slice(worker.indexOf("async function handleChat"));
+  assert.ok(handler.indexOf("await enforceRateLimit") >= 0);
+  assert.ok(handler.indexOf("await enforceRateLimit") < handler.indexOf("for (const model of [PRIMARY_MODEL, FALLBACK_MODEL])"));
   assert.match(app, /x-wia-client/);
 });
 
